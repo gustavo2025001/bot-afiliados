@@ -1,203 +1,315 @@
-const sb=supabase.createClient('https://jhdezfnafhekimolfiuu.supabase.co','sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i');
+const SITE_URL = 'https://gustavo2025001.github.io/bot-afiliados/';
 
-const $=id=>document.getElementById(id);
+const sb = supabase.createClient(
+  'https://jhdezfnafhekimolfiuu.supabase.co',
+  'sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i',
+  {
+    auth: {
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true
+    }
+  }
+);
 
-const SITE_URL='https://gustavo2025001.github.io/bot-afiliados/';
+const $ = id => document.getElementById(id);
 
-function tabs(which){
-  $('signupView').classList.toggle('hidden',which!=='signup');
-  $('loginView').classList.toggle('hidden',which!=='login');
-  $('signupTab').classList.toggle('active',which==='signup');
-  $('loginTab').classList.toggle('active',which==='login');
-  $('msg').textContent='';
+function setStep(numero) {
+  const steps = document.querySelectorAll('.step');
+
+  steps.forEach((step, index) => {
+    step.classList.toggle('active', index === numero - 1);
+  });
 }
 
-$('signupTab').onclick=()=>tabs('signup');
+function showMessage(texto, tipo = '') {
+  const msg = $('msg');
 
-$('loginTab').onclick=()=>tabs('login');
+  if (!msg) return;
 
-$('backLogin').onclick=()=>{
+  msg.textContent = texto;
+
+  if (tipo === 'sucesso') {
+    msg.style.color = '#63e6a3';
+  } else if (tipo === 'erro') {
+    msg.style.color = '#ffb347';
+  } else {
+    msg.style.color = '';
+  }
+}
+
+function tabs(which) {
+  $('signupView').classList.toggle('hidden', which !== 'signup');
+  $('loginView').classList.toggle('hidden', which !== 'login');
+
+  $('signupTab').classList.toggle('active', which === 'signup');
+  $('loginTab').classList.toggle('active', which === 'login');
+
+  showMessage('');
+
+  if (which === 'signup') {
+    setStep(1);
+  }
+}
+
+$('signupTab').onclick = () => tabs('signup');
+$('loginTab').onclick = () => tabs('login');
+
+$('backLogin').onclick = () => {
   $('verifyCard').classList.add('hidden');
   $('authCard').classList.remove('hidden');
+
   tabs('login');
+  setStep(2);
+
+  showMessage(
+    '✅ E-mail verificado! Entre com seu e-mail e senha.',
+    'sucesso'
+  );
 };
 
-function passwordOK(p){
-  return p.length>=8 &&
-         /[A-Z]/.test(p) &&
-         /[0-9]/.test(p) &&
-         /[^A-Za-z0-9]/.test(p);
+function passwordOK(p) {
+  return (
+    p.length >= 8 &&
+    /[A-Z]/.test(p) &&
+    /[0-9]/.test(p) &&
+    /[^A-Za-z0-9]/.test(p)
+  );
 }
 
-$('signupPassword').oninput=e=>{
-  const p=e.target.value;
+$('signupPassword').oninput = e => {
+  const p = e.target.value;
 
-  let checks=[
-    p.length>=8,
+  const checks = [
+    p.length >= 8,
     /[A-Z]/.test(p),
     /[0-9]/.test(p),
     /[^A-Za-z0-9]/.test(p)
   ];
 
-  checks.forEach((x,i)=>{
-    $('r'+(i+1)).classList.toggle('ok',x);
+  checks.forEach((ok, i) => {
+    $('r' + (i + 1)).classList.toggle('ok', ok);
   });
 
-  let n=checks.filter(Boolean).length;
+  const quantidade = checks.filter(Boolean).length;
 
-  $('strengthBar').style.width=(n*25)+'%';
-  $('strengthText').textContent=
-    n<2?'Fraca':
-    n<4?'Média':'Forte';
+  $('strengthBar').style.width = (quantidade * 25) + '%';
+
+  $('strengthText').textContent =
+    quantidade < 2
+      ? 'Fraca'
+      : quantidade < 4
+      ? 'Média'
+      : 'Forte';
 };
 
-$('signupBtn').onclick=async()=>{
+$('signupBtn').onclick = async () => {
+  const name = $('name').value.trim();
+  const email = $('signupEmail').value.trim();
+  const phone = $('phone').value.trim();
+  const phone2 = $('phone2').value.trim();
+  const password = $('signupPassword').value;
+  const password2 = $('password2').value;
 
-  const name=$('name').value.trim();
-  const email=$('signupEmail').value.trim();
-  const phone=$('phone').value.trim();
-  const phone2=$('phone2').value.trim();
-  const p=$('signupPassword').value;
-  const p2=$('password2').value;
+  if (!name || !email || !phone || !password) {
+    return showMessage(
+      'Preencha todos os campos.',
+      'erro'
+    );
+  }
 
-  if(!name||!email||!phone||!p)
-    return $('msg').textContent='Preencha todos os campos.';
+  if (phone !== phone2) {
+    return showMessage(
+      'Os telefones não conferem.',
+      'erro'
+    );
+  }
 
-  if(phone!==phone2)
-    return $('msg').textContent='Os telefones não conferem.';
+  if (password !== password2) {
+    return showMessage(
+      'As senhas não conferem.',
+      'erro'
+    );
+  }
 
-  if(p!==p2)
-    return $('msg').textContent='As senhas não conferem.';
+  if (!passwordOK(password)) {
+    return showMessage(
+      'Use uma senha com 8+ caracteres, maiúscula, número e caractere especial.',
+      'erro'
+    );
+  }
 
-  if(!passwordOK(p))
-    return $('msg').textContent=
-      'Use uma senha com 8+ caracteres, maiúscula, número e caractere especial.';
+  if (!$('terms').checked) {
+    return showMessage(
+      'Aceite os Termos de Uso e a Política de Privacidade.',
+      'erro'
+    );
+  }
 
-  if(!$('terms').checked)
-    return $('msg').textContent=
-      'Aceite os Termos de Uso e a Política de Privacidade.';
+  showMessage('Criando conta...');
 
-  $('msg').textContent='Criando conta...';
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password,
 
-  const {data,error}=await sb.auth.signUp({
-    email:email,
-    password:p,
-
-    options:{
-      data:{
-        name:name,
-        phone:phone
+    options: {
+      data: {
+        name,
+        phone
       },
 
-      emailRedirectTo:SITE_URL
+      emailRedirectTo: SITE_URL
     }
   });
 
-  if(error){
-    $('msg').textContent=error.message;
-    return;
+  if (error) {
+    return showMessage(error.message, 'erro');
   }
 
-  if(data.session){
+  if (data.session) {
     showPanel(data.user);
     return;
   }
 
-  $('verifyEmail').textContent=email;
+  $('verifyEmail').textContent = email;
 
   $('authCard').classList.add('hidden');
   $('verifyCard').classList.remove('hidden');
+
+  setStep(2);
 };
 
+$('loginBtn').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  const password = $('loginPassword').value;
 
-$('loginBtn').onclick=async()=>{
-
-  const email=$('loginEmail').value.trim();
-  const password=$('loginPassword').value;
-
-  if(!email||!password){
-    $('msg').textContent='Digite seu e-mail e sua senha.';
-    return;
+  if (!email || !password) {
+    return showMessage(
+      'Digite seu e-mail e sua senha.',
+      'erro'
+    );
   }
 
-  $('msg').textContent='Entrando...';
+  showMessage('Entrando...');
 
-  const {data,error}=await sb.auth.signInWithPassword({
-    email:email,
-    password:password
+  const { data, error } = await sb.auth.signInWithPassword({
+    email,
+    password
   });
 
-  if(error){
-    $('msg').textContent=error.message;
-    return;
+  if (error) {
+    if (error.message === 'Invalid login credentials') {
+      return showMessage(
+        'E-mail ou senha incorretos.',
+        'erro'
+      );
+    }
+
+    return showMessage(error.message, 'erro');
   }
 
   showPanel(data.user);
 };
 
+$('forgotBtn').onclick = async () => {
+  const email = $('loginEmail').value.trim();
 
-$('forgotBtn').onclick=async()=>{
-
-  const email=$('loginEmail').value.trim();
-
-  if(!email){
-    $('msg').textContent='Digite seu e-mail primeiro.';
-    return;
+  if (!email) {
+    return showMessage(
+      'Digite seu e-mail primeiro.',
+      'erro'
+    );
   }
 
-  $('msg').textContent='Enviando recuperação...';
+  showMessage('Enviando recuperação...');
 
-  const {error}=await sb.auth.resetPasswordForEmail(
+  const { error } = await sb.auth.resetPasswordForEmail(
     email,
     {
-      redirectTo:SITE_URL
+      redirectTo: SITE_URL
     }
   );
 
-  if(error){
-    $('msg').textContent=error.message;
-    return;
+  if (error) {
+    return showMessage(error.message, 'erro');
   }
 
-  $('msg').textContent=
-    'Enviamos o link de recuperação para seu e-mail.';
+  showMessage(
+    '✅ Link de recuperação enviado para seu e-mail.',
+    'sucesso'
+  );
 };
 
-
-function showPanel(u){
-
+function showPanel(user) {
   $('authCard').classList.add('hidden');
   $('verifyCard').classList.add('hidden');
   $('panel').classList.remove('hidden');
 
-  $('welcome').textContent=
-    (u.user_metadata?.name||u.email)+' • '+u.email;
+  setStep(3);
+
+  $('welcome').textContent =
+    (user.user_metadata?.name || user.email) +
+    ' • ' +
+    user.email;
 }
 
+function showVerifiedLogin() {
+  $('panel').classList.add('hidden');
+  $('verifyCard').classList.add('hidden');
+  $('authCard').classList.remove('hidden');
 
-$('logoutBtn').onclick=async()=>{
+  tabs('login');
+  setStep(2);
 
+  showMessage(
+    '✅ E-mail verificado com sucesso! Sua conta está ativa. Agora entre para continuar.',
+    'sucesso'
+  );
+}
+
+$('logoutBtn').onclick = async () => {
   await sb.auth.signOut();
 
-  window.location.href=SITE_URL;
+  window.location.href = SITE_URL;
 };
 
+function veioDaConfirmacao() {
+  const hash = window.location.hash;
+  const search = window.location.search;
 
-sb.auth.onAuthStateChange((event,session)=>{
+  return (
+    hash.includes('type=signup') ||
+    hash.includes('access_token=') ||
+    search.includes('type=signup') ||
+    search.includes('code=')
+  );
+}
 
-  if(session?.user){
+const retornoConfirmacao = veioDaConfirmacao();
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
     showPanel(session.user);
   }
-
 });
 
+(async () => {
+  const { data } = await sb.auth.getSession();
 
-(async()=>{
-
-  const {data}=await sb.auth.getSession();
-
-  if(data.session?.user){
+  if (data.session?.user) {
     showPanel(data.session.user);
+    return;
   }
 
+  if (retornoConfirmacao) {
+    showVerifiedLogin();
+
+    setTimeout(() => {
+      history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+    }, 500);
+  }
 })();
