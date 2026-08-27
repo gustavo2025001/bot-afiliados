@@ -1,4 +1,4 @@
-// Bot Afiliados V4 Premium
+// Bot Afiliados V5 Multiplataforma — integração Mercado Livre corrigida
 // IMPORTANTE: esta é uma chave publishable/anon. Nunca use service_role no navegador/GitHub.
 const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
@@ -135,7 +135,92 @@ async function loadPosts(){const{data,error}=await sb.from('post_logs').select('
 
 async function loadIntegrations(){const{data,error}=await sb.from('integrations').select('provider,status,updated_at');if(error)return;state.integrations=data||[];for(const provider of ['shopee','mercadolivre','whatsapp']){const rec=state.integrations.find(x=>x.provider===provider);const text=rec?.status==='connected'?'Conectada':'Pendente';const ids=provider==='shopee'?['shopeeStatus','shopeeStatus2']:provider==='mercadolivre'?['mlStatus','mlStatus2']:['waStatus','waStatus2'];ids.forEach(id=>$(id).textContent=text)}}
 
-document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/oauth-start?provider=${encodeURIComponent(provider)}`,{headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));if(r.ok&&data.url)location.href=data.url;else toast(data.error||'Integração ainda não configurada no backend. Consulte README V4.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
+async function mercadoLivreConnect(){
+  if(!requireAccess())return;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) return toast('Faça login novamente para conectar o Mercado Livre.','error');
+
+    // A função mercadolivre-callback também inicia o OAuth quando chamada sem ?code=.
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-callback`,{
+      headers:{
+        Authorization:`Bearer ${session.access_token}`,
+        apikey:SUPABASE_ANON_KEY
+      }
+    });
+    const data=await r.json().catch(()=>({}));
+
+    if(r.ok && data.url){
+      location.href=data.url;
+      return;
+    }
+    toast(data.error||data.message||'Não foi possível iniciar a autorização do Mercado Livre.','error');
+  }catch(e){
+    toast('Não foi possível iniciar a integração: '+e.message,'error');
+  }
+}
+
+async function mercadoLivreStatus(showMessage=false){
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session) return false;
+
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-status`,{
+      headers:{
+        Authorization:`Bearer ${session.access_token}`,
+        apikey:SUPABASE_ANON_KEY
+      }
+    });
+    const data=await r.json().catch(()=>({}));
+    const connected = r.ok && (data.connected===true || data.status==='connected');
+
+    ['mlStatus','mlStatus2'].forEach(id=>{
+      const el=$(id);
+      if(el) el.textContent=connected?'Conectada':'Pendente';
+    });
+
+    if(showMessage){
+      if(connected) toast('Mercado Livre conectado com sucesso.','ok');
+      else toast(data.error||data.message||'Mercado Livre ainda não está conectado.','error');
+    }
+    return connected;
+  }catch(e){
+    if(showMessage) toast('Falha ao verificar Mercado Livre: '+e.message,'error');
+    return false;
+  }
+}
+
+document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{
+  if(!requireAccess())return;
+  const provider=btn.dataset.provider;
+
+  if(provider==='mercadolivre'){
+    await mercadoLivreConnect();
+    return;
+  }
+
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/oauth-start?provider=${encodeURIComponent(provider)}`,{
+      headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}
+    });
+    const data=await r.json().catch(()=>({}));
+    if(r.ok&&data.url)location.href=data.url;
+    else toast(data.error||'Integração ainda não configurada no backend.','error');
+  }catch(e){
+    toast('Não foi possível iniciar a integração: '+e.message,'error');
+  }
+});
+
+// Compatível com o botão "Verificar conexão" da V5, caso ele use um destes IDs/classes.
+document.querySelectorAll('#mlCheckStatus,#verifyMlConnection,.verifyMlConnection,[data-ml-status]').forEach(btn=>{
+  btn.onclick=()=>mercadoLivreStatus(true);
+});
+
+// Se voltarmos do OAuth do Mercado Livre, atualiza o status automaticamente.
+if(new URLSearchParams(location.search).has('ml_connected')){
+  mercadoLivreStatus(true);
+}
 
 document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{const old=btn.textContent;btn.disabled=true;btn.textContent='Preparando...';try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({plan:btn.dataset.plan,method:btn.dataset.method,return_url:location.href})});const data=await r.json().catch(()=>({}));if(r.ok&&data.checkout_url)location.href=data.checkout_url;else if(r.ok&&data.pix)toast('PIX gerado pelo gateway.','ok');else toast(data.error||'Gateway ainda não configurado. Veja o README V4.','error')}catch(e){toast('Checkout indisponível: '+e.message,'error')}finally{btn.disabled=false;btn.textContent=old}});
 
