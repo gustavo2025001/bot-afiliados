@@ -25,9 +25,9 @@ create table if not exists public.plans (
 );
 
 insert into public.plans(code,name,price_cents,limits) values
- ('basic','Básico',6000,'{"daily_shares":70,"duration_days":30}'::jsonb),
- ('pro','Pro',8000,'{"daily_shares":100,"duration_days":30}'::jsonb),
- ('premium','Premium',12000,'{"daily_shares":null,"duration_days":30,"unlimited":true}'::jsonb)
+ ('basic','Básico',6000,'{"daily_shares":70,"period_days":30}'::jsonb),
+ ('pro','Pro',8000,'{"daily_shares":100,"period_days":30}'::jsonb),
+ ('premium','Premium',12000,'{"daily_shares":null,"period_days":30,"unlimited":true}'::jsonb)
 on conflict(code) do update set name=excluded.name,price_cents=excluded.price_cents,limits=excluded.limits;
 
 create table if not exists public.subscriptions (
@@ -256,5 +256,143 @@ grant select,insert,update,delete on public.products,public.campaigns,public.sch
 grant select on public.integrations,public.post_logs,public.error_logs to authenticated;
 
 -- IMPORTANTE: depois de executar, defina APENAS a sua conta como admin pelo SQL Editor:
--- update public.profiles set role='admin' where email='SEU_EMAIL_AQUI';
+update public.profiles set role='admin', is_blocked=false where email='gustavodepaulabarbosag@gmail.com';
 -- Não crie tela pública para promover usuários a admin.
+
+-- ============================================================
+-- ATUALIZAÇÃO PREMIUM: OFERTAS + FILA + LIMITE DIÁRIO REAL
+-- Pode ser executada junto com o restante do arquivo.
+-- ============================================================
+
+alter table public.products add column if not exists old_price numeric(12,2) not null default 0;
+alter table public.products add column if not exists discount_percent integer not null default 0;
+alter table public.products add column if not exists category text not null default 'Geral';
+alter table public.products add column if not exists source text not null default 'manual';
+alter table public.products add column if not exists external_id text;
+alter table public.products add column if not exists commission_rate numeric(8,2);
+alter table public.products add column if not exists rating numeric(4,2);
+alter table public.products add column if not exists sold_count integer;
+alter table public.products add column if not exists favorite boolean not null default false;
+alter table public.products add column if not exists queued boolean not null default false;
+alter table public.products add column if not exists imported_at timestamptz;
+create index if not exists products_queue_idx on public.products(user_id,queued,created_at desc);
+
+create table if not exists public.daily_usage (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  usage_date date not null,
+  shares integer not null default 0 check(shares >= 0),
+  updated_at timestamptz not null default now(),
+  primary key(user_id,usage_date)
+);
+alter table public.daily_usage enable row level security;
+drop policy if exists "daily_usage_owner_read" on public.daily_usage;
+create policy "daily_usage_owner_read" on public.daily_usage for select using(user_id=auth.uid() or public.is_admin());
+grant select on public.daily_usage to authenticated;
+
+create or replace function public.get_share_status()
+returns table(plan_code text, used integer, daily_limit integer, unlimited boolean, allowed boolean)
+language plpgsql stable security definer set search_path=public
+as $$
+declare
+  uid uuid := auth.uid();
+  pcode text;
+  lim integer;
+  is_unlimited boolean := false;
+  used_now integer := 0;
+  d date := (now() at time zone 'America/Sao_Paulo')::date;
+begin
+  if uid is null then return; end if;
+  if public.is_admin() then
+    return query select 'admin'::text, coalesce((select shares from public.daily_usage where user_id=uid and usage_date=d),0), null::integer, true, true;
+    return;
+  end if;
+  select s.plan_code,
+         case when coalesce((p.limits->>'unlimited')::boolean,false) then null else nullif(p.limits->>'daily_shares','')::integer end,
+         coalesce((p.limits->>'unlimited')::boolean,false)
+    into pcode,lim,is_unlimited
+  from public.subscriptions s join public.plans p on p.code=s.plan_code
+  join public.profiles pr on pr.id=s.user_id
+  where s.user_id=uid and s.status='active' and pr.is_blocked=false
+    and (s.current_period_end is null or s.current_period_end>now())
+  order by s.created_at desc limit 1;
+  select coalesce(shares,0) into used_now from public.daily_usage where user_id=uid and usage_date=d;
+  return query select pcode,coalesce(used_now,0),lim,coalesce(is_unlimited,false),
+    (pcode is not null and (coalesce(is_unlimited,false) or coalesce(used_now,0)<coalesce(lim,0)));
+end; $$;
+revoke all on function public.get_share_status() from public;
+grant execute on function public.get_share_status() to authenticated;
+
+create or replace function public.toggle_product_queue(target_product uuid, put_in_queue boolean)
+returns void
+language plpgsql security definer set search_path=public
+as $$
+begin
+  if auth.uid() is null then raise exception 'Não autenticado'; end if;
+  if not public.has_active_subscription(auth.uid()) and not public.is_admin() then raise exception 'Assinatura ativa necessária'; end if;
+  update public.products set queued=put_in_queue,updated_at=now()
+   where id=target_product and (user_id=auth.uid() or public.is_admin());
+  if not found then raise exception 'Produto não encontrado'; end if;
+end; $$;
+revoke all on function public.toggle_product_queue(uuid,boolean) from public;
+grant execute on function public.toggle_product_queue(uuid,boolean) to authenticated;
+
+create or replace function public.toggle_product_favorite(target_product uuid, make_favorite boolean)
+returns void
+language plpgsql security definer set search_path=public
+as $$
+begin
+  if auth.uid() is null then raise exception 'Não autenticado'; end if;
+  update public.products set favorite=make_favorite,updated_at=now()
+   where id=target_product and (user_id=auth.uid() or public.is_admin());
+  if not found then raise exception 'Produto não encontrado'; end if;
+end; $$;
+revoke all on function public.toggle_product_favorite(uuid,boolean) from public;
+grant execute on function public.toggle_product_favorite(uuid,boolean) to authenticated;
+
+create or replace function public.record_assisted_share(target_product uuid, target_provider text default 'whatsapp')
+returns jsonb
+language plpgsql security definer set search_path=public
+as $$
+declare
+  uid uuid := auth.uid();
+  d date := (now() at time zone 'America/Sao_Paulo')::date;
+  pcode text;
+  lim integer;
+  unlimited boolean := false;
+  used_now integer := 0;
+  title_now text;
+begin
+  if uid is null then raise exception 'Não autenticado'; end if;
+  if target_provider not in ('whatsapp','mercadolivre','shopee') then raise exception 'Provedor inválido'; end if;
+  select title into title_now from public.products where id=target_product and (user_id=uid or public.is_admin());
+  if title_now is null then raise exception 'Produto não encontrado'; end if;
+
+  if public.is_admin() then
+    unlimited := true; pcode := 'admin';
+  else
+    select s.plan_code,
+      case when coalesce((p.limits->>'unlimited')::boolean,false) then null else nullif(p.limits->>'daily_shares','')::integer end,
+      coalesce((p.limits->>'unlimited')::boolean,false)
+      into pcode,lim,unlimited
+    from public.subscriptions s join public.plans p on p.code=s.plan_code join public.profiles pr on pr.id=s.user_id
+    where s.user_id=uid and s.status='active' and pr.is_blocked=false
+      and (s.current_period_end is null or s.current_period_end>now())
+    order by s.created_at desc limit 1;
+    if pcode is null then raise exception 'Assinatura ativa necessária'; end if;
+  end if;
+
+  insert into public.daily_usage(user_id,usage_date,shares) values(uid,d,0) on conflict do nothing;
+  select shares into used_now from public.daily_usage where user_id=uid and usage_date=d for update;
+  if not unlimited and used_now >= lim then raise exception 'Limite diário atingido'; end if;
+  update public.daily_usage set shares=shares+1,updated_at=now() where user_id=uid and usage_date=d returning shares into used_now;
+  update public.products set queued=false,updated_at=now() where id=target_product;
+  insert into public.post_logs(user_id,provider,status,response_meta)
+  values(uid,target_provider,'sent',jsonb_build_object('mode','assisted','product_id',target_product,'title',title_now));
+  return jsonb_build_object('ok',true,'used',used_now,'limit',lim,'unlimited',unlimited,'plan',pcode);
+end; $$;
+revoke all on function public.record_assisted_share(uuid,text) from public;
+grant execute on function public.record_assisted_share(uuid,text) to authenticated;
+
+-- Reforça que apenas a conta definida abaixo é administradora.
+update public.profiles set role='user' where role='admin' and lower(email) <> lower('gustavodepaulabarbosag@gmail.com');
+update public.profiles set role='admin',is_blocked=false where lower(email)=lower('gustavodepaulabarbosag@gmail.com');

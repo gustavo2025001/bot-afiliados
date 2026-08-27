@@ -1,1 +1,118 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bot Afiliados Multiplataforma V5</title><link rel="stylesheet" href="assets/style.css"></head><body><div class="app"><aside><div class="brand"><div class="brand-title">🤖 <b>BOT AFILIADOS</b></div><small>MULTIPLATAFORMA V5</small><div class="owner-brand"><span class="crown">♛</span><span>Desenvolvido por</span><strong>Gustavo Barbosa</strong><em>FOCO • ORGANIZAÇÃO • RESULTADOS</em></div></div><nav id="nav"></nav><div class="account"><div class="owner-mini">GB</div><b>Gustavo Barbosa</b><small>Dono do Bot</small><span>● CONTA ATIVA</span><small>V5.0 • Central Inteligente</small></div></aside><main><header><div class="search">🔎 <input id="globalSearch" placeholder="Buscar produto, categoria ou link..."></div><div class="status">🟢 Bot Online　🟠 Shopee　🟡 Mercado Livre</div></header><section id="view"></section></main></div><dialog id="editor"><form method="dialog" class="modal"><h2>Editar produto</h2><div class="formgrid"><label>Plataforma<select id="ePlatform"><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select></label><label>Nome<input id="eName"></label><label>Categoria<select id="eCategory"><option>Geral</option><option>Eletrônicos</option><option>Ferramentas</option><option>Casa</option><option>Moda</option><option>Beleza</option><option>Automotivo</option><option>Games</option></select></label><label>Preço original<input id="eOldPrice" placeholder="R$ 299,90"></label><label>Preço promocional<input id="ePrice" placeholder="R$ 199,90"></label><label>Desconto %<input id="eDiscount" type="number" min="0" max="100"></label><label>Comissão estimada<input id="eCommission" placeholder="R$ 19,99"></label><label>Avaliação<input id="eRating" type="number" min="0" max="5" step="0.1"></label><label>Vendidos<input id="eSold" type="number" min="0"></label><label class="wide">URL da imagem<input id="eImage" placeholder="https://..."></label><label class="wide">Link afiliado<input id="eUrl"></label></div><div class="actions"><button value="cancel" class="ghost">Cancelar</button><button type="button" id="saveEdit" class="primary">Salvar produto</button></div></form></dialog><script src="js/app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Bot Afiliados Premium - ofertas, campanhas, fila e automação.">
+  <title>Bot Afiliados Premium</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="toast" class="toast hidden"></div>
+
+<section id="authShell" class="authShell">
+  <aside class="hero">
+    <div class="brand">🤖 <div><b>BOT AFILIADOS</b><small>PREMIUM AUTOMATION</small></div></div>
+    <span class="pill">✦ OFERTAS → FILA → COMPARTILHAMENTO</span>
+    <h1>ENCONTRE.<br><em>AUTOMATIZE.</em><br>VENDA MAIS.</h1>
+    <p>Um painel para organizar ofertas, gerar anúncios, agendar divulgações e conectar integrações autorizadas.</p>
+    <div class="heroFeatures"><span>✓ Supabase + RLS</span><span>✓ Planos e limites diários</span><span>✓ Admin protegido</span><span>✓ APIs no backend</span></div>
+  </aside>
+  <main class="authContent">
+    <div id="authCard" class="card authCard">
+      <div class="tabs"><button id="signupTab" class="active">Criar conta</button><button id="loginTab">Entrar</button></div>
+      <div id="signupView">
+        <h2>Criar sua conta</h2>
+        <div class="two"><label>Nome completo<input id="name" autocomplete="name"></label><label>E-mail<input id="signupEmail" type="email" autocomplete="email"></label><label>Telefone / WhatsApp<input id="phone" autocomplete="tel"></label><label>Confirmar telefone<input id="phone2" autocomplete="tel"></label><label>Senha<input id="signupPassword" type="password" autocomplete="new-password"></label><label>Confirmar senha<input id="password2" type="password" autocomplete="new-password"></label></div>
+        <div class="strength"><span>Força</span><div><i id="strengthBar"></i></div><b id="strengthText">—</b></div>
+        <div class="rules"><span id="r1">○ 8+ caracteres</span><span id="r2">○ Maiúscula</span><span id="r3">○ Número</span><span id="r4">○ Especial</span></div>
+        <label class="check"><input id="terms" type="checkbox"> Aceito os Termos e a Política de Privacidade.</label>
+        <button id="signupBtn" class="primary">Criar minha conta</button>
+      </div>
+      <div id="loginView" class="hidden">
+        <h2>Entrar</h2><p class="muted">Acesse sua conta do Bot Afiliados.</p>
+        <label>E-mail<input id="loginEmail" type="email" autocomplete="email"></label><label>Senha<input id="loginPassword" type="password" autocomplete="current-password"></label>
+        <button id="loginBtn" class="primary">Entrar</button><button id="forgotBtn" class="linkbtn">Esqueci minha senha</button>
+      </div>
+      <p id="msg" class="msg"></p>
+    </div>
+    <div id="verifyCard" class="card hidden"><h2>✉ Verifique seu e-mail</h2><p>Enviamos a confirmação para <b id="verifyEmail"></b>.</p><button id="backLogin" class="primary">Ir para entrar</button></div>
+  </main>
+</section>
+
+<div id="panel" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">🤖 <div><b>BOT AFILIADOS</b><small>PREMIUM</small></div></div>
+    <nav>
+      <button class="nav active" data-view="dashboard">⌂ <span>Dashboard</span></button>
+      <button class="nav protected" data-view="offers">🔥 <span>Ofertas</span></button>
+      <button class="nav protected" data-view="products">🛍 <span>Produtos</span></button>
+      <button class="nav protected" data-view="queue">☷ <span>Fila</span></button>
+      <button class="nav protected" data-view="campaigns">➤ <span>Campanhas</span></button>
+      <button class="nav protected" data-view="schedules">◷ <span>Agendamentos</span></button>
+      <button class="nav protected" data-view="integrations">⌁ <span>Integrações</span></button>
+      <button class="nav protected" data-view="reports">⌗ <span>Histórico</span></button>
+      <button class="nav" data-view="plans">♢ <span>Planos</span></button>
+      <button class="nav adminOnly hidden" data-view="admin">⚙ <span>Área Admin</span></button>
+    </nav>
+    <div class="sidebarBottom"><div class="userbox"><b id="sideName">Usuário</b><small id="accountStatus">● Verificando</small></div><button id="logoutBtn" class="secondary">Sair</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><span class="eyebrow">CENTRAL DE AUTOMAÇÃO</span><h1 id="welcome">Olá 👋</h1></div>
+      <div class="headerActions"><div class="usagePill"><small>USO HOJE</small><b id="dailyUsage">0 / —</b></div><span id="planBadge" class="badge warning">SEM PLANO</span><button id="newProduct" class="primary compact protectedAction">＋ Produto</button></div>
+    </header>
+
+    <div id="subscriptionGate" class="gateBanner hidden"><div><b>🔒 Funções bloqueadas</b><span>Escolha um plano ativo para liberar ofertas, campanhas, fila e automações.</span></div><button data-open-plans class="primary compact">Ver planos</button></div>
+
+    <section class="view active" id="view-dashboard">
+      <section class="kpis">
+        <article><small>OFERTAS</small><strong id="offerCount">0</strong><em>Encontradas/importadas</em></article>
+        <article><small>NA FILA</small><strong id="queueCount">0</strong><em>Aguardando divulgação</em></article>
+        <article><small>POSTADAS HOJE</small><strong id="todayPostCount">0</strong><em>Dentro do limite</em></article>
+        <article><small>CAMPANHAS</small><strong id="campaignCount">0</strong><em>Configuradas</em></article>
+        <article><small>AGENDAMENTOS</small><strong id="scheduleCount">0</strong><em>Pendentes</em></article>
+      </section>
+      <div class="dashGrid">
+        <article class="panelCard heroPanel">
+          <div class="boxTitle"><div><span class="sectionKicker">AUTOMAÇÃO</span><h2>Ofertas → Fila → Compartilhamento</h2></div><span id="automationStatus" class="statusDot">Preparando</span></div>
+          <p class="muted">Importe ofertas das integrações autorizadas ou adicione manualmente. Depois gere o anúncio, coloque na fila e compartilhe.</p>
+          <div class="flow"><div><b>1</b><span>Buscar ofertas</span></div><i>→</i><div><b>2</b><span>Filtrar</span></div><i>→</i><div><b>3</b><span>Fila</span></div><i>→</i><div><b>4</b><span>Publicar</span></div></div>
+          <div class="quickRow"><button id="syncOffers" class="primary protectedAction">↻ Buscar ofertas</button><button id="quickProduct" class="secondary protectedAction">＋ Adicionar manual</button><button data-view-jump="queue" class="secondary protectedAction">☷ Abrir fila</button></div>
+        </article>
+        <article class="panelCard"><div class="boxTitle"><h3>Seu plano</h3><span id="planCardName" class="tag gold">SEM PLANO</span></div><div class="planUsage"><strong id="planCardStatus">Acesso limitado</strong><div class="progress"><i id="usageBar"></i></div><small id="planCardHelp">Escolha um plano para liberar as funções.</small><small id="planExpiry">Sem assinatura</small></div></article>
+        <article class="panelCard"><div class="boxTitle"><h3>Integrações</h3><span>STATUS</span></div><div class="integrationRows"><div>🛍 Shopee <b id="shopeeStatus">Pendente</b></div><div>🤝 Mercado Livre <b id="mlStatus">Pendente</b></div><div>🟢 WhatsApp <b id="waStatus">Pendente</b></div></div></article>
+        <article class="panelCard recentWide"><div class="boxTitle"><h3>Ofertas recentes</h3><button class="textBtn" data-view-jump="offers">Ver todas</button></div><div id="offerListMini" class="offerMini"></div></article>
+        <article class="panelCard"><div class="boxTitle"><h3>Próximos horários</h3></div><div id="scheduleListMini" class="list"></div></article>
+      </div>
+    </section>
+
+    <section class="view" id="view-offers"><div class="sectionHead"><div><span class="sectionKicker">CATÁLOGO AUTOMÁTICO</span><h2>🔥 Ofertas</h2><p>Ofertas importadas das integrações ou cadastradas manualmente.</p></div><div class="headBtns"><button id="syncOffers2" class="secondary protectedAction">↻ Buscar ofertas</button><button id="newOffer" class="primary compact protectedAction">＋ Nova oferta</button></div></div><div class="filterBar"><input id="offerSearch" placeholder="Buscar produto, categoria ou plataforma..."><select id="offerPlatform"><option value="all">Todas plataformas</option><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select><select id="offerFilter"><option value="all">Todos</option><option value="queue">Na fila</option><option value="favorite">Favoritos</option></select></div><div id="offerGrid" class="offerGrid"></div></section>
+
+    <section class="view" id="view-products"><div class="sectionHead"><div><h2>Produtos</h2><p>Todos os produtos ficam separados por usuário no Supabase.</p></div><button id="newProduct2" class="primary compact protectedAction">＋ Novo Produto</button></div><div class="panelCard"><div id="productList" class="tableList"></div></div></section>
+
+    <section class="view" id="view-queue"><div class="sectionHead"><div><h2>☷ Fila de divulgação</h2><p>Prepare a sequência de ofertas que será usada nos compartilhamentos.</p></div><button id="shareNext" class="primary compact protectedAction">▶ Compartilhar próxima</button></div><div class="queueLayout"><div class="panelCard"><div id="queueList" class="tableList"></div></div><aside class="panelCard previewCard"><span class="sectionKicker">PRÉVIA</span><h3 id="previewTitle">Selecione uma oferta</h3><div id="previewImage" class="previewImage">🛍</div><pre id="previewMessage" class="previewMessage">A mensagem aparecerá aqui.</pre><div class="stackBtns"><button id="previewWhatsApp" class="waBtn" disabled>🟢 Compartilhar no WhatsApp</button><button id="previewCopy" class="secondary" disabled>Copiar mensagem</button></div></aside></div></section>
+
+    <section class="view" id="view-campaigns"><div class="sectionHead"><div><h2>Campanhas</h2><p>Monte mensagens e defina os canais de divulgação.</p></div><button id="newCampaign" class="primary compact protectedAction">＋ Nova Campanha</button></div><div class="panelCard"><div id="campaignList" class="tableList"></div></div></section>
+    <section class="view" id="view-schedules"><div class="sectionHead"><div><h2>Agendamentos</h2><p>Agende campanhas para execução futura no backend.</p></div><button id="newSchedule" class="primary compact protectedAction">＋ Novo Agendamento</button></div><div class="panelCard"><div id="scheduleList" class="tableList"></div></div></section>
+
+    <section class="view" id="view-integrations"><div class="sectionHead"><div><h2>Integrações autorizadas</h2><p>Tokens privados ficam somente no Supabase Secrets/backend.</p></div></div><div class="integrationGrid"><article class="panelCard integrationCard"><span class="bigIcon">🛍</span><h3>Shopee</h3><p>Busca de ofertas e links depende da API oficial liberada para sua conta.</p><b id="shopeeStatus2">Pendente</b><button data-provider="shopee" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🤝</span><h3>Mercado Livre</h3><p>OAuth/API oficial para importar produtos e dados autorizados.</p><b id="mlStatus2">Pendente</b><button data-provider="mercadolivre" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🟢</span><h3>WhatsApp</h3><p>Compartilhamento assistido funciona; automação total requer Cloud API autorizada.</p><b id="waStatus2">Assistido</b><button data-provider="whatsapp" class="secondary connectProvider">Conectar API</button></article></div></section>
+
+    <section class="view" id="view-reports"><div class="sectionHead"><div><h2>Histórico</h2><p>Compartilhamentos e tentativas registradas.</p></div></div><div class="panelCard"><div id="postList" class="tableList"></div></div></section>
+
+    <section class="view" id="view-plans"><div class="sectionHead"><div><h2>Planos</h2><p>Limite de compartilhamento reinicia diariamente. A assinatura vale 30 dias.</p></div></div><div class="plansGrid"><article class="priceCard"><span>BÁSICO</span><strong>R$ 60<small>/30 dias</small></strong><ul><li><b>70</b> compartilhamentos por dia</li><li>Ofertas, fila e campanhas</li><li>Agendamentos</li></ul><button class="primary checkout" data-plan="basic" data-method="pix">PIX</button><button class="secondary checkout" data-plan="basic" data-method="card">Cartão</button></article><article class="priceCard featured"><span>PRO</span><strong>R$ 80<small>/30 dias</small></strong><ul><li><b>100</b> compartilhamentos por dia</li><li>Automação avançada</li><li>Mais volume diário</li></ul><button class="primary checkout" data-plan="pro" data-method="pix">PIX</button><button class="secondary checkout" data-plan="pro" data-method="card">Cartão</button></article><article class="priceCard"><span>PREMIUM</span><strong>R$ 120<small>/30 dias</small></strong><ul><li><b>Ilimitado</b> por dia</li><li>Todos os recursos</li><li>Maior liberdade de automação</li></ul><button class="primary checkout" data-plan="premium" data-method="pix">PIX</button><button class="secondary checkout" data-plan="premium" data-method="card">Cartão</button></article></div><div class="panelCard notice"><b>Pagamento</b><p>PIX/cartão estão preparados para gateway no backend. O plano só deve ser ativado depois do webhook confirmar o pagamento.</p></div></section>
+
+    <section class="view" id="view-admin"><div class="sectionHead"><div><span class="sectionKicker">ACESSO EXCLUSIVO</span><h2>Área Admin</h2><p>Usuários, assinaturas, bloqueios, uso diário, postagens e erros.</p></div><button id="refreshAdmin" class="secondary">Atualizar</button></div><section class="kpis adminKpis"><article><small>USUÁRIOS</small><strong id="adminUsers">0</strong></article><article><small>ASSINATURAS</small><strong id="adminActiveSubs">0</strong></article><article><small>POSTAGENS</small><strong id="adminPosts">0</strong></article><article><small>ERROS</small><strong id="adminErrors">0</strong></article><article><small>ADMIN</small><strong>1</strong><em>Exclusivo</em></article></section><div class="panelCard"><div class="boxTitle"><h3>Usuários e assinaturas</h3></div><div id="adminUserList" class="tableList"></div></div><div class="panelCard adminBox"><div class="boxTitle"><h3>Erros recentes</h3></div><div id="adminErrorList" class="tableList"></div></div></section>
+  </main>
+</div>
+
+<div id="productModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="productModal">×</button><h2>Adicionar oferta/produto</h2><label>Você também pode colar o texto completo da oferta<textarea id="pPaste" rows="3" placeholder="Dê uma olhada em ... por R$... https://..."></textarea></label><button id="parseOffer" class="secondary full">Ler texto da oferta</button><label>Título<input id="pTitle"></label><div class="two"><label>Preço atual<input id="pPrice" placeholder="99,90"></label><label>Preço antigo<input id="pOldPrice" placeholder="149,90"></label></div><div class="two"><label>Desconto %<input id="pDiscount" type="number"></label><label>Plataforma<select id="pPlatform"><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select></label></div><label>Link de afiliado<input id="pLink" placeholder="https://..."></label><label>Imagem (URL)<input id="pImage" placeholder="https://..."></label><label>Categoria<input id="pCategory" placeholder="Geral"></label><button id="saveProduct" class="primary">Salvar no Supabase</button><p id="pMsg" class="msg"></p></div></div>
+
+<div id="campaignModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="campaignModal">×</button><h2>Nova Campanha</h2><label>Nome<input id="cName" placeholder="Ofertas da noite"></label><label>Produto<select id="cProduct"></select></label><label>Mensagem<textarea id="cMessage" rows="7" placeholder="🔥 Oferta imperdível..."></textarea></label><div class="channelChecks"><label class="check"><input type="checkbox" value="whatsapp" name="channel"> WhatsApp</label><label class="check"><input type="checkbox" value="shopee" name="channel"> Shopee</label><label class="check"><input type="checkbox" value="mercadolivre" name="channel"> Mercado Livre</label></div><button id="saveCampaign" class="primary">Salvar campanha</button><p id="cMsg" class="msg"></p></div></div>
+<div id="scheduleModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="scheduleModal">×</button><h2>Novo Agendamento</h2><label>Campanha<select id="sCampaign"></select></label><label>Data e hora<input id="sWhen" type="datetime-local"></label><button id="saveSchedule" class="primary">Agendar</button><p id="sMsg" class="msg"></p></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body>
+</html>

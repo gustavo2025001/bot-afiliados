@@ -1,246 +1,89 @@
-// Bot Afiliados V5 Multiplataforma — integração Mercado Livre corrigida
-// IMPORTANTE: esta é uma chave publishable/anon. Nunca use service_role no navegador/GitHub.
+// BOT AFILIADOS PREMIUM
+// Chave publishable/anon pode ficar no frontend quando o RLS está correto.
+// NUNCA coloque service_role, OAuth secret ou segredo do gateway no GitHub.
 const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
-
-const state={user:null,profile:null,subscription:null,planStatus:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[]};
+const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},previewId:null};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
 const toast=(text,type='')=>{const el=$('toast');el.textContent=text;el.className='toast '+type;clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),4200)};
-const modal=id=>$(id).classList.remove('hidden');
-const closeModal=id=>$(id).classList.add('hidden');
+const modal=id=>$(id)?.classList.remove('hidden');
+const closeModal=id=>$(id)?.classList.add('hidden');
+const isAdmin=()=>state.profile?.role==='admin';
+const subscriptionActive=()=>!!state.subscription&&state.subscription.status==='active'&&(!state.subscription.current_period_end||new Date(state.subscription.current_period_end)>new Date());
+const hasAccess=()=>isAdmin()||subscriptionActive();
 
 function tabs(w){$('signupView').classList.toggle('hidden',w!=='signup');$('loginView').classList.toggle('hidden',w!=='login');$('signupTab').classList.toggle('active',w==='signup');$('loginTab').classList.toggle('active',w==='login');$('msg').textContent=''}
-$('signupTab').onclick=()=>tabs('signup');$('loginTab').onclick=()=>tabs('login');$('backLogin').onclick=()=>{$('verifyCard').classList.add('hidden');$('authCard').classList.remove('hidden');tabs('login')};
+$('signupTab').onclick=()=>tabs('signup'); $('loginTab').onclick=()=>tabs('login'); $('backLogin').onclick=()=>{$('verifyCard').classList.add('hidden');$('authCard').classList.remove('hidden');tabs('login')};
 function passwordOK(p){return p.length>=8&&/[A-Z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p)}
-$('signupPassword').oninput=e=>{let p=e.target.value,c=[p.length>=8,/[A-Z]/.test(p),/[0-9]/.test(p),/[^A-Za-z0-9]/.test(p)];c.forEach((x,i)=>$('r'+(i+1)).classList.toggle('ok',x));let n=c.filter(Boolean).length;$('strengthBar').style.width=n*25+'%';$('strengthText').textContent=n<2?'Fraca':n<4?'Média':'Forte'};
-
-$('signupBtn').onclick=async()=>{
-  let name=$('name').value.trim(),email=$('signupEmail').value.trim(),phone=$('phone').value.trim(),p=$('signupPassword').value;
-  if(!name||!email||!phone||!p)return $('msg').textContent='Preencha todos os campos.';
-  if(phone!==$('phone2').value.trim())return $('msg').textContent='Os telefones não conferem.';
-  if(p!==$('password2').value)return $('msg').textContent='As senhas não conferem.';
-  if(!passwordOK(p))return $('msg').textContent='A senha ainda não atende às regras.';
-  if(!$('terms').checked)return $('msg').textContent='Aceite os termos.';
-  $('msg').textContent='Criando conta...';
-  let{data,error}=await sb.auth.signUp({email,password:p,options:{data:{name,phone},emailRedirectTo:location.origin+location.pathname}});
-  if(error)return $('msg').textContent=error.message;
-  if(data.session)return boot(data.user);
-  $('verifyEmail').textContent=email;$('authCard').classList.add('hidden');$('verifyCard').classList.remove('hidden');
-};
-$('loginBtn').onclick=async()=>{let{data,error}=await sb.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error)return $('msg').textContent=error.message;boot(data.user)};
-$('forgotBtn').onclick=async()=>{let email=$('loginEmail').value.trim();if(!email)return $('msg').textContent='Digite seu e-mail primeiro.';let{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});$('msg').textContent=error?error.message:'Link de recuperação enviado.'};
+$('signupPassword').oninput=e=>{const p=e.target.value,c=[p.length>=8,/[A-Z]/.test(p),/[0-9]/.test(p),/[^A-Za-z0-9]/.test(p)];c.forEach((x,i)=>$('r'+(i+1)).classList.toggle('ok',x));const n=c.filter(Boolean).length;$('strengthBar').style.width=n*25+'%';$('strengthText').textContent=n<2?'Fraca':n<4?'Média':'Forte'};
+$('signupBtn').onclick=async()=>{const name=$('name').value.trim(),email=$('signupEmail').value.trim(),phone=$('phone').value.trim(),p=$('signupPassword').value;if(!name||!email||!phone||!p)return $('msg').textContent='Preencha todos os campos.';if(phone!==$('phone2').value.trim())return $('msg').textContent='Os telefones não conferem.';if(p!==$('password2').value)return $('msg').textContent='As senhas não conferem.';if(!passwordOK(p))return $('msg').textContent='A senha ainda não atende às regras.';if(!$('terms').checked)return $('msg').textContent='Aceite os termos.';$('msg').textContent='Criando conta...';const{data,error}=await sb.auth.signUp({email,password:p,options:{data:{name,phone},emailRedirectTo:location.origin+location.pathname}});if(error)return $('msg').textContent=error.message;if(data.session)return boot(data.user);$('verifyEmail').textContent=email;$('authCard').classList.add('hidden');$('verifyCard').classList.remove('hidden')};
+$('loginBtn').onclick=async()=>{const{data,error}=await sb.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPassword').value});if(error)return $('msg').textContent=error.message;boot(data.user)};
+$('forgotBtn').onclick=async()=>{const email=$('loginEmail').value.trim();if(!email)return $('msg').textContent='Digite seu e-mail primeiro.';const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});$('msg').textContent=error?error.message:'Link de recuperação enviado.'};
 $('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
 
-function subscriptionActive(){
-  if(isAdmin())return true;
-  if(state.planStatus)return state.planStatus.allowed===true;
-  if(!state.subscription)return false;
-  return state.subscription.status==='active' && (!state.subscription.current_period_end || new Date(state.subscription.current_period_end)>new Date());
-}
+async function boot(user){state.user=user;$('authShell').classList.add('hidden');$('panel').classList.remove('hidden');const n=user.user_metadata?.name||user.email?.split('@')[0]||'Usuário';$('welcome').textContent=n+' 👋';$('sideName').textContent=n;await loadAccount();enforceGate();if(isAdmin())document.querySelectorAll('.adminOnly').forEach(x=>x.classList.remove('hidden'));await Promise.all([loadProducts(),loadCampaigns(),loadSchedules(),loadPosts(),loadIntegrations(),loadShareStatus()]);if(isAdmin())loadAdmin();renderAll()}
+async function loadAccount(){const[{data:profile,error:pe},{data:sub}]=await Promise.all([sb.from('profiles').select('*').eq('id',state.user.id).maybeSingle(),sb.from('subscriptions').select('*').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(1).maybeSingle()]);if(pe)toast('Execute o SQL atualizado no Supabase: '+pe.message,'error');state.profile=profile;state.subscription=sub}
+function enforceGate(){const active=hasAccess();$('subscriptionGate').classList.toggle('hidden',active);document.querySelectorAll('.protected').forEach(el=>el.classList.toggle('locked',!active));document.querySelectorAll('.protectedAction').forEach(el=>el.disabled=!active);const plan=isAdmin()?'ADMIN':(state.subscription?.plan_code?.toUpperCase()||'SEM PLANO');$('planBadge').textContent=plan;$('planBadge').className='badge '+(active?'success':'warning');$('accountStatus').textContent=active?'● Conta liberada':'● Acesso limitado';$('planCardName').textContent=plan;$('planCardStatus').textContent=active?'Acesso liberado':'Acesso limitado';$('planExpiry').textContent=state.subscription?.current_period_end?'Assinatura até '+new Date(state.subscription.current_period_end).toLocaleDateString('pt-BR'):isAdmin()?'Administrador':'Sem assinatura';$('automationStatus').textContent=active?'Pronta para uso':'Bloqueada'}
+function requireAccess(){if(hasAccess())return true;toast('Assinatura ativa necessária.','error');showView('plans');return false}
+function showView(name){if(['offers','products','queue','campaigns','schedules','integrations','reports'].includes(name)&&!requireAccess())return;if(name==='admin'&&!isAdmin())return toast('Acesso administrativo negado.','error');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('view-'+name)?.classList.add('active');document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===name));if(name==='queue')renderQueue();if(name==='offers')renderOffers()}
+document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>showView(btn.dataset.view));document.querySelectorAll('[data-view-jump]').forEach(btn=>btn.onclick=()=>showView(btn.dataset.viewJump));document.querySelectorAll('[data-open-plans]').forEach(btn=>btn.onclick=()=>showView('plans'));document.querySelectorAll('.closeModal').forEach(btn=>btn.onclick=()=>closeModal(btn.dataset.modal));
 
-function isAdmin(){return state.profile?.role==='admin'}
-function enforceGate(){
-  const active=subscriptionActive();
-  $('subscriptionGate').classList.toggle('hidden',active||isAdmin());
-  document.querySelectorAll('.protected').forEach(el=>el.classList.toggle('locked',!active&&!isAdmin()));
-  document.querySelectorAll('.protectedAction').forEach(el=>el.disabled=!active&&!isAdmin());
-  const plan=state.subscription?.plan_code?.toUpperCase()||'SEM PLANO';
-  $('planBadge').textContent=isAdmin()?'ADMIN':plan;
-  $('planBadge').className='badge '+((active||isAdmin())?'success':'warning');
-  $('accountStatus').textContent=(active||isAdmin())?'● Conta liberada':'● Acesso limitado';
-  $('currentPlan').textContent=isAdmin()?'ADMIN':plan;
-  $('planExpiry').textContent=state.subscription?.current_period_end?'Até '+new Date(state.subscription.current_period_end).toLocaleDateString('pt-BR'):'Sem assinatura';
-  $('planCardName').textContent=isAdmin()?'ADMIN':plan;
-  $('planCardStatus').textContent=(active||isAdmin())?'Acesso liberado':'Acesso limitado';
-  const ps=state.planStatus;
-  const used=isAdmin()?'Ilimitado':(ps?.daily_limit==null&&active?'Ilimitado':`${ps?.used_today||0}/${ps?.daily_limit||0}`);
-  $('dailyUsage').textContent=used;
-  $('dailyUsageHelp').textContent=isAdmin()?'Admin sem limite':(ps?.daily_limit==null&&active?'Compartilhamentos ilimitados':'Compartilhamentos usados hoje');
-  $('planCardHelp').textContent=(active||isAdmin())?'Recursos disponíveis conforme o plano.':'Escolha um plano para liberar as funções.';
-}
-function requireAccess(){if(subscriptionActive()||isAdmin())return true;toast('Assinatura ativa necessária.','error');showView('plans');return false}
+async function loadShareStatus(){const{data,error}=await sb.rpc('get_share_status');if(error){state.share={used:0,limit:null,unlimited:isAdmin(),allowed:hasAccess(),plan:isAdmin()?'admin':null};return}const r=Array.isArray(data)?data[0]:data;if(r)state.share={used:Number(r.used||0),limit:r.daily_limit==null?null:Number(r.daily_limit),unlimited:!!r.unlimited,allowed:!!r.allowed,plan:r.plan_code};renderUsage()}
+function renderUsage(){const s=state.share;const label=s.unlimited?`${s.used} / ILIMITADO`:`${s.used} / ${s.limit??'—'}`;$('dailyUsage').textContent=label;$('todayPostCount').textContent=s.used;const pct=s.unlimited?Math.min(s.used,100):s.limit?Math.min(100,(s.used/s.limit)*100):0;$('usageBar').style.width=pct+'%';$('planCardHelp').textContent=s.unlimited?'Compartilhamentos ilimitados por dia.':s.limit?`Limite diário: ${s.limit}. Reinicia no dia seguinte.`:'Escolha um plano para liberar as funções.'}
 
-async function boot(user){
-  state.user=user;$('authShell').classList.add('hidden');$('panel').classList.remove('hidden');
-  const n=user.user_metadata?.name||user.email?.split('@')[0]||'Usuário';$('welcome').textContent=n+' 👋';$('sideName').textContent=n;
-  await loadAccount();
-  enforceGate();
-  if(isAdmin())document.querySelectorAll('.adminOnly').forEach(x=>x.classList.remove('hidden'));
-  await Promise.all([loadProducts(),loadCampaigns(),loadSchedules(),loadPosts(),loadIntegrations()]);
-  if(isAdmin())loadAdmin();
-}
-async function loadAccount(){
-  const [{data:profile,error:pe},{data:sub,error:se}]=await Promise.all([
-    sb.from('profiles').select('*').eq('id',state.user.id).maybeSingle(),
-    sb.from('subscriptions').select('*').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(1).maybeSingle()
-  ]);
-  if(pe)toast('Execute o SQL da V4 no Supabase: '+pe.message,'error');
-  state.profile=profile;state.subscription=sub;
-  const {data:planStatus,error:pse}=await sb.rpc('my_plan_status');
-  if(!pse)state.planStatus=planStatus;
-  else state.planStatus=null;
-}
+function parseOfferText(text){const url=(text.match(/https?:\/\/\S+/)||[])[0]?.replace(/[),.!]+$/,'');if(!url)return null;const priceMatch=text.match(/(?:por|agora|de)\s+(R\$\s?[\d.,]+)/i)||text.match(/(R\$\s?[\d.,]+)/i);const nums=[...text.matchAll(/R\$\s?([\d.,]+)/gi)].map(m=>Number(m[1].replace(/\./g,'').replace(',','.'))).filter(Number.isFinite);const current=nums.length?nums[nums.length-1]:0,old=nums.length>1?nums[0]:0;const title=text.replace(url,'').replace(/^Dê uma olhada em\s*/i,'').split(/\s+(?:por|de)\s+R\$/i)[0].trim();return{title:title||'Oferta importada',price:current,old_price:old>current?old:0,discount_percent:old>current?Math.round((1-current/old)*100):0,affiliate_url:url,platform:/mercadolivre|mercadolivre\.com/i.test(url)?'mercadolivre':'shopee'}}
+$('parseOffer').onclick=()=>{const p=parseOfferText($('pPaste').value);if(!p)return toast('Não encontrei um link válido no texto.','error');$('pTitle').value=p.title;$('pPrice').value=String(p.price||'').replace('.',',');$('pOldPrice').value=String(p.old_price||'').replace('.',',');$('pDiscount').value=p.discount_percent||'';$('pLink').value=p.affiliate_url;$('pPlatform').value=p.platform;toast('Oferta lida. Confira os dados e salve.','ok')};
+$('newProduct').onclick=$('newProduct2').onclick=$('quickProduct').onclick=$('newOffer').onclick=()=>{if(!requireAccess())return;clearProductForm();modal('productModal')};
+function clearProductForm(){['pPaste','pTitle','pPrice','pOldPrice','pDiscount','pLink','pImage','pCategory'].forEach(id=>{if($(id))$(id).value=''});$('pCategory').value='Geral';$('pMsg').textContent=''}
 
-function showView(name){
-  if(['products','campaigns','schedules','integrations','reports'].includes(name)&&!requireAccess())return;
-  if(name==='admin'&&!isAdmin())return toast('Acesso administrativo negado.','error');
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('view-'+name)?.classList.add('active');
-  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
-}
-document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>showView(btn.dataset.view));
-document.querySelectorAll('[data-view-jump]').forEach(btn=>btn.onclick=()=>showView(btn.dataset.viewJump));
-document.querySelectorAll('[data-open-plans]').forEach(btn=>btn.onclick=()=>showView('plans'));
-document.querySelectorAll('.closeModal').forEach(btn=>btn.onclick=()=>closeModal(btn.dataset.modal));
+async function loadProducts(){const{data,error}=await sb.from('products').select('*').order('created_at',{ascending:false});if(error){renderDbError('productList','Produtos',error);return}state.products=data||[];renderProducts();renderOffers();renderQueue()}
+function renderAll(){renderProducts();renderOffers();renderQueue();renderCampaigns();renderSchedules();renderPosts();renderUsage()}
+function renderProducts(){if(!$('productList'))return;$('offerCount').textContent=state.products.length;$('queueCount').textContent=state.products.filter(x=>x.queued).length;$('productList').innerHTML=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><div class="rowActions"><button class="iconBtn" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Fila':'+ Fila'}</button><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';const mini=state.products.slice(0,5);$('offerListMini').innerHTML=mini.map(p=>`<div class="miniOffer"><div class="miniThumb">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍'}</div><div><b>${esc(p.title)}</b><small>${money(p.price)} • ${esc(p.platform)}</small></div><span class="tag">${p.discount_percent?'-'+p.discount_percent+'%':'OFERTA'}</span></div>`).join('')||'<div class="empty">Nenhuma oferta ainda.</div>'}
+function filteredOffers(){const q=($('offerSearch')?.value||'').toLowerCase(),plat=$('offerPlatform')?.value||'all',f=$('offerFilter')?.value||'all';return state.products.filter(p=>(!q||[p.title,p.category,p.platform].join(' ').toLowerCase().includes(q))&&(plat==='all'||p.platform===plat)&&(f==='all'||f==='queue'&&p.queued||f==='favorite'&&p.favorite))}
+function renderOffers(){if(!$('offerGrid'))return;const list=filteredOffers();$('offerGrid').innerHTML=list.map(p=>`<article class="offerCard"><div class="offerImage">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.title)}" loading="lazy">`:'🛍️'}</div><div class="offerBody"><div class="offerTop"><span class="platformTag">${esc(p.platform).toUpperCase()}</span>${p.discount_percent?`<span class="discountTag">-${p.discount_percent}%</span>`:''}</div><h3>${esc(p.title)}</h3>${Number(p.old_price)>Number(p.price)?`<div class="oldPrice">${money(p.old_price)}</div>`:''}<div class="price">${money(p.price)}</div><div class="offerActions"><button class="${p.queued?'queueActive':''}" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Na fila':'+ Fila'}</button><button onclick="favoriteProduct('${p.id}',${!p.favorite})">${p.favorite?'♥ Favorito':'♡ Favoritar'}</button><button onclick="selectPreview('${p.id}')">👁 Prévia</button><button onclick="shareWhatsApp('${p.id}')">🟢 WhatsApp</button></div></div></article>`).join('')||'<div class="empty">Nenhuma oferta encontrada.</div>'}
+['offerSearch','offerPlatform','offerFilter'].forEach(id=>$(id)?.addEventListener(id==='offerSearch'?'input':'change',renderOffers));
+$('saveProduct').onclick=async()=>{if(!requireAccess())return;const title=$('pTitle').value.trim(),link=$('pLink').value.trim();if(!title||!link)return $('pMsg').textContent='Preencha título e link.';$('pMsg').textContent='Salvando...';const num=id=>Number(String($(id).value||'0').replace(/\./g,'').replace(',','.'))||0;const payload={user_id:state.user.id,title,price:num('pPrice'),old_price:num('pOldPrice'),discount_percent:Number($('pDiscount').value)||0,platform:$('pPlatform').value,affiliate_url:link,image_url:$('pImage').value.trim()||null,category:$('pCategory').value.trim()||'Geral',source:'manual'};const{error}=await sb.from('products').insert(payload);if(error)return $('pMsg').textContent=error.message;closeModal('productModal');await loadProducts();toast('Oferta salva no Supabase.','ok')};
+window.deleteProduct=async id=>{if(!requireAccess())return;if(!confirm('Excluir este produto?'))return;const{error}=await sb.from('products').delete().eq('id',id);if(error)return toast(error.message,'error');await loadProducts();toast('Produto excluído.','ok')};
+window.queueProduct=async(id,on)=>{if(!requireAccess())return;const{error}=await sb.rpc('toggle_product_queue',{target_product:id,put_in_queue:on});if(error)return toast(error.message,'error');const p=state.products.find(x=>x.id===id);if(p)p.queued=on;renderProducts();renderOffers();renderQueue()};
+window.favoriteProduct=async(id,on)=>{const{error}=await sb.rpc('toggle_product_favorite',{target_product:id,make_favorite:on});if(error)return toast(error.message,'error');const p=state.products.find(x=>x.id===id);if(p)p.favorite=on;renderOffers()};
 
-$('newProduct').onclick=$('newProduct2').onclick=$('quickProduct').onclick=()=>{if(!requireAccess())return;modal('productModal')};
-$('newCampaign').onclick=()=>{if(!requireAccess())return;fillCampaignProducts();modal('campaignModal')};
-$('newSchedule').onclick=()=>{if(!requireAccess())return;fillScheduleCampaigns();modal('scheduleModal')};
+function adMessage(p){const old=Number(p.old_price)>Number(p.price)?`💸 De: ${money(p.old_price)}\n`:'';const disc=p.discount_percent?`🔥 ${p.discount_percent}% OFF\n`:'';return `🔥 OFERTA ${String(p.platform||'').toUpperCase()} 🔥\n\n🛍️ ${p.title}\n${old}💰 Por: ${money(p.price)}\n${disc}\n🛒 Confira agora:\n${p.affiliate_url}`}
+window.selectPreview=id=>{state.previewId=id;renderPreview();showView('queue')};
+function renderQueue(){if(!$('queueList'))return;const q=state.products.filter(x=>x.queued);$('queueCount').textContent=q.length;$('queueList').innerHTML=q.map((p,i)=>`<div class="tableRow"><div><b>${String(i+1).padStart(2,'0')} • ${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><span class="tag">NA FILA</span><span>${p.discount_percent?'-'+p.discount_percent+'%':'Oferta'}</span><div class="rowActions"><button class="iconBtn" onclick="selectPreview('${p.id}')">Prévia</button><button class="dangerBtn" onclick="queueProduct('${p.id}',false)">Remover</button></div></div>`).join('')||'<div class="empty">Fila vazia. Adicione ofertas na página Ofertas.</div>';if(!state.previewId&&q[0])state.previewId=q[0].id;if(state.previewId&&!state.products.some(x=>x.id===state.previewId))state.previewId=q[0]?.id||null;renderPreview()}
+function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;$('previewCopy').disabled=false}
+$('previewCopy').onclick=async()=>{const p=state.products.find(x=>x.id===state.previewId);if(!p)return;await navigator.clipboard.writeText(adMessage(p));toast('Mensagem copiada.','ok')};
+$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);$('shareNext').onclick=()=>{const p=state.products.find(x=>x.queued);if(!p)return toast('A fila está vazia.','error');shareWhatsApp(p.id)};
+window.shareWhatsApp=async id=>{if(!requireAccess())return;const p=state.products.find(x=>x.id===id);if(!p)return;const popup=window.open('about:blank','_blank');const{data,error}=await sb.rpc('record_assisted_share',{target_product:id,target_provider:'whatsapp'});if(error){popup?.close();toast(error.message.includes('Limite')?'Você atingiu o limite de hoje. Amanhã o contador reinicia.':error.message,'error');await loadShareStatus();return}if(popup)popup.location.href='https://wa.me/?text='+encodeURIComponent(adMessage(p));else window.location.href='https://wa.me/?text='+encodeURIComponent(adMessage(p));p.queued=false;await Promise.all([loadShareStatus(),loadPosts()]);renderProducts();renderOffers();renderQueue();toast('Compartilhamento registrado no uso diário.','ok')};
 
-async function loadProducts(){
-  const{data,error}=await sb.from('products').select('*').order('created_at',{ascending:false});
-  if(error){renderDbError('productList','Produtos',error);return} state.products=data||[];renderProducts();
-}
-function renderProducts(){
-  $('productCount').textContent=state.products.length;$('emptyHint').textContent=state.products.length?state.products.length+' produto(s)':'Cadastre o primeiro';
-  const rows=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';
-  $('productList').innerHTML=rows;
-  $('productListMini').innerHTML=state.products.slice(0,5).map(p=>`<div class="row"><div class="prodIcon">🛍</div><div><b>${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><a href="${esc(p.affiliate_url)}" target="_blank" rel="noopener">Abrir</a><span></span></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';
-}
-$('saveProduct').onclick=async()=>{
-  if(!requireAccess())return;const title=$('pTitle').value.trim(),link=$('pLink').value.trim();if(!title||!link)return $('pMsg').textContent='Preencha título e link.';
-  $('pMsg').textContent='Salvando...';
-  const payload={user_id:state.user.id,title,price:Number(String($('pPrice').value).replace(',','.'))||0,platform:$('pPlatform').value,affiliate_url:link,image_url:$('pImage').value.trim()||null};
-  const{error}=await sb.from('products').insert(payload);if(error)return $('pMsg').textContent=error.message;
-  ['pTitle','pPrice','pLink','pImage'].forEach(id=>$(id).value='');$('pMsg').textContent='';closeModal('productModal');await loadProducts();toast('Produto salvo no Supabase.','ok');
-};
-window.deleteProduct=async id=>{if(!requireAccess())return;const{error}=await sb.from('products').delete().eq('id',id);if(error)return toast(error.message,'error');await loadProducts();toast('Produto excluído.','ok')};
+async function syncOffers(){if(!requireAccess())return;const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({providers:['shopee','mercadolivre']})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Integração de ofertas ainda não configurada.');if(data.imported)toast(`${data.imported} oferta(s) importada(s).`,'ok');await loadProducts()}catch(e){toast(e.message+' Você ainda pode adicionar ofertas manualmente.','error')}finally{btns.forEach((b,i)=>{b.disabled=false;b.textContent=i?'↻ Buscar ofertas':'↻ Buscar ofertas'})}}
+$('syncOffers').onclick=syncOffers;$('syncOffers2').onclick=syncOffers;
 
 function fillCampaignProducts(){$('cProduct').innerHTML='<option value="">Sem produto</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}
+$('newCampaign').onclick=()=>{if(!requireAccess())return;fillCampaignProducts();modal('campaignModal')};$('cProduct').onchange=()=>{const p=state.products.find(x=>x.id===$('cProduct').value);if(p&&!$('cMessage').value.trim())$('cMessage').value=adMessage(p)};
 async function loadCampaigns(){const{data,error}=await sb.from('campaigns').select('*,products(title)').order('created_at',{ascending:false});if(error){renderDbError('campaignList','Campanhas',error);return}state.campaigns=data||[];renderCampaigns()}
-function renderCampaigns(){$('campaignCount').textContent=state.campaigns.length;$('campaignList').innerHTML=state.campaigns.map(c=>`<div class="tableRow"><div><b>${esc(c.name)}</b><small>${esc(c.products?.title||'Sem produto')}</small></div><span>${esc((c.channels||[]).join(', '))}</span><span class="tag">${esc(c.status)}</span><button class="dangerBtn" onclick="deleteCampaign('${c.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhuma campanha criada.</div>'}
-$('saveCampaign').onclick=async()=>{if(!requireAccess())return;const name=$('cName').value.trim(),message=$('cMessage').value.trim(),channels=[...document.querySelectorAll('input[name="channel"]:checked')].map(x=>x.value);if(!name||!message||!channels.length)return $('cMsg').textContent='Informe nome, mensagem e ao menos um canal.';const{error}=await sb.from('campaigns').insert({user_id:state.user.id,name,product_id:$('cProduct').value||null,message,channels,status:'draft'});if(error)return $('cMsg').textContent=error.message;$('cName').value=$('cMessage').value='';document.querySelectorAll('input[name="channel"]').forEach(x=>x.checked=false);closeModal('campaignModal');await loadCampaigns();toast('Campanha criada.','ok')};
-window.deleteCampaign=async id=>{if(!requireAccess())return;const{error}=await sb.from('campaigns').delete().eq('id',id);if(error)return toast(error.message,'error');await Promise.all([loadCampaigns(),loadSchedules()]);toast('Campanha excluída.','ok')};
+function renderCampaigns(){if(!$('campaignList'))return;$('campaignCount').textContent=state.campaigns.length;$('campaignList').innerHTML=state.campaigns.map(c=>`<div class="tableRow"><div><b>${esc(c.name)}</b><small>${esc(c.products?.title||'Sem produto')}</small></div><span>${esc((c.channels||[]).join(', '))}</span><span class="tag">${esc(c.status)}</span><button class="dangerBtn" onclick="deleteCampaign('${c.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhuma campanha criada.</div>'}
+$('saveCampaign').onclick=async()=>{if(!requireAccess())return;const name=$('cName').value.trim(),message=$('cMessage').value.trim(),channels=[...document.querySelectorAll('input[name="channel"]:checked')].map(x=>x.value);if(!name||!message||!channels.length)return $('cMsg').textContent='Informe nome, mensagem e ao menos um canal.';const{error}=await sb.from('campaigns').insert({user_id:state.user.id,name,product_id:$('cProduct').value||null,message,channels,status:'ready'});if(error)return $('cMsg').textContent=error.message;$('cName').value=$('cMessage').value='';document.querySelectorAll('input[name="channel"]').forEach(x=>x.checked=false);closeModal('campaignModal');await loadCampaigns();toast('Campanha criada.','ok')};
+window.deleteCampaign=async id=>{if(!confirm('Excluir esta campanha?'))return;const{error}=await sb.from('campaigns').delete().eq('id',id);if(error)return toast(error.message,'error');await Promise.all([loadCampaigns(),loadSchedules()])};
 
 function fillScheduleCampaigns(){$('sCampaign').innerHTML=state.campaigns.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')||'<option value="">Crie uma campanha primeiro</option>'}
+$('newSchedule').onclick=()=>{if(!requireAccess())return;fillScheduleCampaigns();modal('scheduleModal')};
 async function loadSchedules(){const{data,error}=await sb.from('schedules').select('*,campaigns(name)').order('scheduled_for',{ascending:true});if(error){renderDbError('scheduleList','Agendamentos',error);return}state.schedules=data||[];renderSchedules()}
-function renderSchedules(){$('scheduleCount').textContent=state.schedules.filter(s=>s.status==='pending').length;const html=state.schedules.map(s=>`<div class="tableRow"><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">${esc(s.status)}</span><span>${esc(s.timezone||'America/Sao_Paulo')}</span><button class="dangerBtn" onclick="deleteSchedule('${s.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>';$('scheduleList').innerHTML=html;$('scheduleListMini').innerHTML=state.schedules.slice(0,4).map(s=>`<div class="row"><div class="prodIcon">◷</div><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">${esc(s.status)}</span><span></span></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>'}
-$('saveSchedule').onclick=async()=>{if(!requireAccess())return;const campaign_id=$('sCampaign').value,when=$('sWhen').value;if(!campaign_id||!when)return $('sMsg').textContent='Selecione a campanha e a data.';const d=new Date(when);if(d<=new Date())return $('sMsg').textContent='Escolha uma data futura.';const{error}=await sb.from('schedules').insert({user_id:state.user.id,campaign_id,scheduled_for:d.toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Sao_Paulo',status:'pending'});if(error)return $('sMsg').textContent=error.message;$('sWhen').value='';closeModal('scheduleModal');await loadSchedules();toast('Agendamento criado.','ok')};
-window.deleteSchedule=async id=>{if(!requireAccess())return;const{error}=await sb.from('schedules').delete().eq('id',id);if(error)return toast(error.message,'error');await loadSchedules();toast('Agendamento excluído.','ok')};
+function renderSchedules(){if(!$('scheduleList'))return;const pending=state.schedules.filter(s=>s.status==='pending');$('scheduleCount').textContent=pending.length;$('scheduleList').innerHTML=state.schedules.map(s=>`<div class="tableRow"><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">${esc(s.status)}</span><span>${esc(s.timezone||'America/Sao_Paulo')}</span><button class="dangerBtn" onclick="deleteSchedule('${s.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>';$('scheduleListMini').innerHTML=pending.slice(0,5).map(s=>`<div class="miniOffer"><div class="miniThumb">◷</div><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">PENDENTE</span></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>'}
+$('saveSchedule').onclick=async()=>{if(!requireAccess())return;const campaign_id=$('sCampaign').value,when=$('sWhen').value;if(!campaign_id||!when)return $('sMsg').textContent='Selecione a campanha e a data.';const d=new Date(when);if(d<=new Date())return $('sMsg').textContent='Escolha uma data futura.';const{error}=await sb.from('schedules').insert({user_id:state.user.id,campaign_id,scheduled_for:d.toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Sao_Paulo',status:'pending'});if(error)return $('sMsg').textContent=error.message;closeModal('scheduleModal');$('sWhen').value='';await loadSchedules();toast('Agendamento criado.','ok')};
+window.deleteSchedule=async id=>{if(!confirm('Excluir este agendamento?'))return;const{error}=await sb.from('schedules').delete().eq('id',id);if(error)return toast(error.message,'error');await loadSchedules()};
 
-async function loadPosts(){const{data,error}=await sb.from('post_logs').select('*').order('created_at',{ascending:false}).limit(100);if(error){renderDbError('postList','Postagens',error);return}state.posts=data||[];$('postCount').textContent=state.posts.length;$('postList').innerHTML=state.posts.map(p=>`<div class="tableRow"><div><b>${esc(p.provider)}</b><small>${fmtDate(p.created_at)}</small></div><span class="tag">${esc(p.status)}</span><span>${esc(p.external_id||'—')}</span><span>${esc(p.error_message||'')}</span></div>`).join('')||'<div class="empty">Nenhuma postagem registrada.</div>'}
+async function loadPosts(){const{data,error}=await sb.from('post_logs').select('*').order('created_at',{ascending:false}).limit(100);if(error){renderDbError('postList','Histórico',error);return}state.posts=data||[];renderPosts()}
+function renderPosts(){if(!$('postList'))return;$('postList').innerHTML=state.posts.map(p=>`<div class="tableRow"><div><b>${esc(p.provider)}</b><small>${fmtDate(p.created_at)}</small></div><span class="tag">${esc(p.status)}</span><span>${esc(p.response_meta?.title||p.external_id||'—')}</span><span>${esc(p.error_message||'')}</span></div>`).join('')||'<div class="empty">Nenhum compartilhamento registrado.</div>'}
+async function loadIntegrations(){const{data,error}=await sb.from('integrations').select('provider,status,updated_at');if(error)return;state.integrations=data||[];for(const provider of ['shopee','mercadolivre','whatsapp']){const rec=state.integrations.find(x=>x.provider===provider);let text=provider==='whatsapp'&&!rec?'Assistido':rec?.status==='connected'?'Conectada':'Pendente';const ids=provider==='shopee'?['shopeeStatus','shopeeStatus2']:provider==='mercadolivre'?['mlStatus','mlStatus2']:['waStatus','waStatus2'];ids.forEach(id=>{if($(id))$(id).textContent=text})}}
+document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/oauth-start?provider=${encodeURIComponent(provider)}`,{headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));if(r.ok&&data.url)location.href=data.url;else toast(data.error||'Integração ainda não configurada no backend.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
 
-async function loadIntegrations(){const{data,error}=await sb.from('integrations').select('provider,status,updated_at');if(error)return;state.integrations=data||[];for(const provider of ['shopee','mercadolivre','whatsapp']){const rec=state.integrations.find(x=>x.provider===provider);const text=rec?.status==='connected'?'Conectada':'Pendente';const ids=provider==='shopee'?['shopeeStatus','shopeeStatus2']:provider==='mercadolivre'?['mlStatus','mlStatus2']:['waStatus','waStatus2'];ids.forEach(id=>$(id).textContent=text)}}
+document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{const old=btn.textContent;btn.disabled=true;btn.textContent='Preparando...';try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({plan:btn.dataset.plan,method:btn.dataset.method,return_url:location.href})});const data=await r.json().catch(()=>({}));if(r.ok&&data.checkout_url)location.href=data.checkout_url;else toast(data.error||'Gateway ainda não configurado.','error')}catch(e){toast('Checkout indisponível: '+e.message,'error')}finally{btn.disabled=false;btn.textContent=old}});
 
-async function mercadoLivreConnect(){
-  if(!requireAccess())return;
-  try{
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session) return toast('Faça login novamente para conectar o Mercado Livre.','error');
-
-    // A função mercadolivre-callback também inicia o OAuth quando chamada sem ?code=.
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-callback`,{
-      headers:{
-        Authorization:`Bearer ${session.access_token}`,
-        apikey:SUPABASE_ANON_KEY
-      }
-    });
-    const data=await r.json().catch(()=>({}));
-
-    if(r.ok && data.url){
-      location.href=data.url;
-      return;
-    }
-    toast(data.error||data.message||'Não foi possível iniciar a autorização do Mercado Livre.','error');
-  }catch(e){
-    toast('Não foi possível iniciar a integração: '+e.message,'error');
-  }
-}
-
-async function mercadoLivreStatus(showMessage=false){
-  try{
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session) return false;
-
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-status`,{
-      headers:{
-        Authorization:`Bearer ${session.access_token}`,
-        apikey:SUPABASE_ANON_KEY
-      }
-    });
-    const data=await r.json().catch(()=>({}));
-    const connected = r.ok && (data.connected===true || data.status==='connected');
-
-    ['mlStatus','mlStatus2'].forEach(id=>{
-      const el=$(id);
-      if(el) el.textContent=connected?'Conectada':'Pendente';
-    });
-
-    if(showMessage){
-      if(connected) toast('Mercado Livre conectado com sucesso.','ok');
-      else toast(data.error||data.message||'Mercado Livre ainda não está conectado.','error');
-    }
-    return connected;
-  }catch(e){
-    if(showMessage) toast('Falha ao verificar Mercado Livre: '+e.message,'error');
-    return false;
-  }
-}
-
-document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{
-  if(!requireAccess())return;
-  const provider=btn.dataset.provider;
-
-  if(provider==='mercadolivre'){
-    await mercadoLivreConnect();
-    return;
-  }
-
-  try{
-    const{data:{session}}=await sb.auth.getSession();
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/oauth-start?provider=${encodeURIComponent(provider)}`,{
-      headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}
-    });
-    const data=await r.json().catch(()=>({}));
-    if(r.ok&&data.url)location.href=data.url;
-    else toast(data.error||'Integração ainda não configurada no backend.','error');
-  }catch(e){
-    toast('Não foi possível iniciar a integração: '+e.message,'error');
-  }
-});
-
-// Compatível com o botão "Verificar conexão" da V5, caso ele use um destes IDs/classes.
-document.querySelectorAll('#mlCheckStatus,#verifyMlConnection,.verifyMlConnection,[data-ml-status]').forEach(btn=>{
-  btn.onclick=()=>mercadoLivreStatus(true);
-});
-
-// Se voltarmos do OAuth do Mercado Livre, atualiza o status automaticamente.
-if(new URLSearchParams(location.search).has('ml_connected')){
-  mercadoLivreStatus(true);
-}
-
-document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{const old=btn.textContent;btn.disabled=true;btn.textContent='Preparando...';try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({plan:btn.dataset.plan,method:btn.dataset.method,return_url:location.href})});const data=await r.json().catch(()=>({}));if(r.ok&&data.checkout_url)location.href=data.checkout_url;else if(r.ok&&data.pix)toast('PIX gerado pelo gateway.','ok');else toast(data.error||'Gateway ainda não configurado. Veja o README V4.','error')}catch(e){toast('Checkout indisponível: '+e.message,'error')}finally{btn.disabled=false;btn.textContent=old}});
-
-async function loadAdmin(){
-  if(!isAdmin())return;
-  const [{data:users,error:ue},{data:errors,error:ee},{count:postCount},{count:activeSubs}]=await Promise.all([
-    sb.rpc('admin_list_users'),
-    sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(50),
-    sb.from('post_logs').select('*',{count:'exact',head:true}),
-    sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active')
-  ]);
-  if(ue)return toast('Admin SQL incompleto: '+ue.message,'error');
-  const arr=users||[];$('adminUsers').textContent=arr.length;$('adminActiveSubs').textContent=activeSubs||0;$('adminPosts').textContent=postCount||0;$('adminErrors').textContent=(errors||[]).length;
-  $('adminUserList').innerHTML=arr.map(u=>`<div class="tableRow"><div><b>${esc(u.name||u.email)}</b><small>${esc(u.email)}</small></div><span class="tag">${esc(u.plan_code||'sem plano')}</span><span>${esc(u.subscription_status||'inactive')}</span><button class="secondary" onclick="adminToggle('${u.user_id}',${!u.is_blocked})">${u.is_blocked?'Liberar':'Bloquear'}</button></div>`).join('')||'<div class="empty">Nenhum usuário.</div>';
-  if(ee)$('adminErrorList').innerHTML='<div class="empty">'+esc(ee.message)+'</div>';else $('adminErrorList').innerHTML=(errors||[]).map(e=>`<div class="tableRow"><div><b>${esc(e.source)}</b><small>${fmtDate(e.created_at)}</small></div><span>${esc(e.code||'—')}</span><span>${esc(e.message)}</span><span></span></div>`).join('')||'<div class="empty">Nenhum erro.</div>';
-}
-$('refreshAdmin').onclick=loadAdmin;
-window.adminToggle=async(userId,blocked)=>{if(!isAdmin())return;const{error}=await sb.rpc('admin_set_user_blocked',{target_user:userId,blocked});if(error)return toast(error.message,'error');await loadAdmin();toast(blocked?'Usuário bloqueado.':'Usuário liberado.','ok')};
-
-function renderDbError(id,label,error){const el=$(id);if(el)el.innerHTML=`<div class="empty">${esc(label)} indisponível: ${esc(error.message)}<br>Execute o arquivo supabase_v4.sql.</div>`}
-
-sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){state.user=null}if(event==='SIGNED_IN'&&session?.user&&!state.user)boot(session.user)});
-(async()=>{const{data}=await sb.auth.getSession();if(data.session?.user)boot(data.session.user)})();
+async function loadAdmin(){if(!isAdmin())return;const[{data:users,error:ue},{data:errors},{count:postCount},{count:activeSubs}]=await Promise.all([sb.rpc('admin_list_users'),sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(50),sb.from('post_logs').select('*',{count:'exact',head:true}),sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active')]);if(ue)return toast('Admin SQL incompleto: '+ue.message,'error');const arr=users||[];$('adminUsers').textContent=arr.length;$('adminActiveSubs').textContent=activeSubs||0;$('adminPosts').textContent=postCount||0;$('adminErrors').textContent=(errors||[]).length;$('adminUserList').innerHTML=arr.map(u=>`<div class="tableRow"><div><b>${esc(u.name||u.email)}</b><small>${esc(u.email)}</small></div><span class="tag">${esc(u.plan_code||'sem plano')}</span><span>${u.current_period_end?new Date(u.current_period_end).toLocaleDateString('pt-BR'):esc(u.subscription_status||'inactive')}</span><button class="secondary" onclick="adminToggle('${u.user_id}',${!u.is_blocked})">${u.is_blocked?'Liberar':'Bloquear'}</button></div>`).join('')||'<div class="empty">Nenhum usuário.</div>';$('adminErrorList').innerHTML=(errors||[]).map(e=>`<div class="tableRow"><div><b>${esc(e.source)}</b><small>${fmtDate(e.created_at)}</small></div><span>${esc(e.code||'—')}</span><span>${esc(e.message)}</span><span></span></div>`).join('')||'<div class="empty">Nenhum erro.</div>'}
+$('refreshAdmin').onclick=loadAdmin;window.adminToggle=async(userId,blocked)=>{if(!isAdmin())return;const{error}=await sb.rpc('admin_set_user_blocked',{target_user:userId,blocked});if(error)return toast(error.message,'error');await loadAdmin();toast(blocked?'Usuário bloqueado.':'Usuário liberado.','ok')};
+function renderDbError(id,label,error){const el=$(id);if(el)el.innerHTML=`<div class="empty">${esc(label)} indisponível: ${esc(error.message)}<br>Execute o SQL atualizado.</div>`}
+sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT')state.user=null;if(event==='SIGNED_IN'&&session?.user&&!state.user)boot(session.user)});(async()=>{const{data}=await sb.auth.getSession();if(data.session?.user)boot(data.session.user)})();
