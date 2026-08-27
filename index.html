@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bot Afiliados Multiplataforma</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="page">
+  <aside class="hero">
+    <div class="logo"><span>🤖</span><div><b>BOT AFILIADOS</b><small>MULTIPLATAFORMA</small></div></div>
+    <span class="pill">✦ PAINEL COMPLETO</span>
+    <h1>AUTOMATIZE.<br><em>DIVULGUE.</em><br>VENDA MAIS.</h1>
+    <p>Organize seus produtos, campanhas e divulgações em um só lugar.</p>
+    <ul>
+      <li>✓ Postagem e organização de campanhas</li>
+      <li>✓ Painel de produtos e relatórios</li>
+      <li>✓ Integrações preparadas para evolução</li>
+      <li>✓ Conta individual e acesso protegido</li>
+    </ul>
+    <div class="security">🛡️ <div><b>Ambiente protegido</b><small>Credenciais privadas ficam somente no servidor.</small></div></div>
+  </aside>
+
+  <section class="content">
+    <div class="steps">
+      <div class="step active"><b>1</b><span>CONTA<small>Crie sua conta</small></span></div>
+      <div class="line"></div>
+      <div class="step"><b>2</b><span>VERIFICAÇÃO<small>Confirme seu e-mail</small></span></div>
+      <div class="line"></div>
+      <div class="step"><b>3</b><span>PLANO<small>Em breve</small></span></div>
+      <div class="line"></div>
+      <div class="step"><b>4</b><span>PAGAMENTO<small>Em breve</small></span></div>
+    </div>
+
+    <div id="authCard" class="card">
+      <div class="tabs">
+        <button id="signupTab" class="active">Criar conta</button>
+        <button id="loginTab">Entrar</button>
+      </div>
+
+      <div id="signupView">
+        <h2>Criar sua conta</h2>
+        <p class="muted">Preencha seus dados para começar.</p>
+        <div class="two">
+          <label>Nome completo<input id="name" autocomplete="name" placeholder="Seu nome"></label>
+          <label>E-mail<input id="signupEmail" type="email" autocomplete="email" placeholder="seuemail@gmail.com"></label>
+          <label>Telefone / WhatsApp<input id="phone" type="tel" autocomplete="tel" placeholder="(11) 98765-4321"></label>
+          <label>Confirmar telefone<input id="phone2" type="tel" autocomplete="tel" placeholder="Repita o telefone"></label>
+          <label>Senha<input id="signupPassword" type="password" autocomplete="new-password" placeholder="Crie uma senha forte"></label>
+          <label>Confirmar senha<input id="password2" type="password" autocomplete="new-password" placeholder="Repita a senha"></label>
+        </div>
+        <div class="strength"><span>Força da senha</span><div><i id="strengthBar"></i></div><b id="strengthText">—</b></div>
+        <div class="rules">
+          <span id="r1">○ 8+ caracteres</span><span id="r2">○ Maiúscula</span><span id="r3">○ Número</span><span id="r4">○ Caractere especial</span>
+        </div>
+        <label class="check"><input id="terms" type="checkbox"> Eu aceito os Termos de Uso e a Política de Privacidade.</label>
+        <button id="signupBtn" class="primary">Criar minha conta</button>
+      </div>
+
+      <div id="loginView" class="hidden">
+        <h2>Entrar</h2><p class="muted">Acesse sua conta do Bot Afiliados.</p>
+        <label>E-mail<input id="loginEmail" type="email" autocomplete="email"></label>
+        <label>Senha<input id="loginPassword" type="password" autocomplete="current-password"></label>
+        <button id="loginBtn" class="primary">Entrar</button>
+        <button id="forgotBtn" class="linkbtn">Esqueci minha senha</button>
+      </div>
+
+      <p id="msg" class="msg"></p>
+    </div>
+
+    <div id="verifyCard" class="card hidden">
+      <div class="verifyIcon">✉</div>
+      <h2>Verifique seu e-mail</h2>
+      <p class="muted">Enviamos a confirmação para <b id="verifyEmail"></b>.</p>
+      <p>Abra o e-mail e use o link de confirmação. Depois volte aqui e entre na sua conta.</p>
+      <button id="backLogin" class="primary">Ir para entrar</button>
+    </div>
+
+    <div id="panel" class="card hidden">
+      <div class="panelTop"><div><span class="pill">CONTA ATIVA</span><h2>Bem-vindo ao Bot Afiliados</h2><p id="welcome" class="muted"></p></div><button id="logoutBtn" class="secondary">Sair</button></div>
+      <div class="dashboard">
+        <div><b>👤 Cadastro</b><span>Conectado ao Supabase</span></div>
+        <div><b>🛒 Mercado Livre</b><span>Integração preparada</span></div>
+        <div><b>💳 Plano</b><span>Próxima etapa</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body></html>
