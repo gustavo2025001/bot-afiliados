@@ -1,17 +1,5 @@
-# Bot Afiliados V2
-Cadastro profissional conectado ao Supabase Authentication.
+# Bot Afiliados V3 Premium
+Atualização visual baseada na opção 3. Mantém autenticação Supabase e adiciona dashboard responsivo, cadastro local de produtos e atalhos preparados para integrações futuras.
 
-## Incluído
-- Cadastro com nome, e-mail e telefone
-- Confirmação de senha e telefone
-- Regras de senha forte
-- Confirmação de e-mail via Supabase
-- Login, logout e recuperação de senha
-- Layout responsivo
-- Estrutura visual para plano e pagamento
-
-## Segurança
-A Publishable Key é usada no navegador. Nunca coloque `sb_secret_...`, service role ou outras chaves privadas neste repositório público.
-
-## Próxima etapa
-Configurar a URL pública do GitHub Pages no Supabase Authentication > URL Configuration e então implementar planos/pagamentos no backend.
+## Publicar
+Substitua no repositório GitHub Pages os arquivos index.html, style.css e app.js por estes arquivos. Não publique chaves secretas/service_role.
