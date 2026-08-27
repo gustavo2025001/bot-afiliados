@@ -1,0 +1,13 @@
+BOT AFILIADOS MULTIPLATAFORMA V5
+
+Atualização baseada na sua V5 original.
+- Shopee + Mercado Livre no mesmo catálogo
+- Detecção automática da plataforma pelo link
+- Filtros por plataforma
+- Mensagens adaptadas para cada loja
+- Fila, favoritos, histórico e gerador mantidos
+- Área APIs/Integrações com Mercado Livre
+- Client Secret NÃO deve ser colocado no HTML; use backend seguro
+- Preparado para futura hospedagem online e OAuth
+
+Abra index.html para testar localmente.
