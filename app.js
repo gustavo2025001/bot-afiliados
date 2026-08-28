@@ -203,7 +203,50 @@ function getBotConfig(){try{return JSON.parse(localStorage.getItem(BOT_CONFIG_KE
 function botIsActive(){return localStorage.getItem(BOT_ACTIVE_KEY)==='1'}
 function renderBotActivity(){if(!$('botActivity'))return;const rows=(state.posts||[]).slice(0,5);$('botActivity').innerHTML=rows.map(p=>`<div class="activityItem"><b>${esc(p.status==='success'?'Publicado':'Registro')}: ${esc(p.provider||'canal')}</b><span>${p.created_at?new Date(p.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="empty">Nenhuma publicação registrada ainda.</div>'}
 function renderBotV51(){if(!$('botAutoToggle'))return;const c=getBotConfig(),active=botIsActive();$('botAutoToggle').checked=active;$('botToggleText').textContent=active?'BOT ATIVO':'BOT DESATIVADO';$('botActiveBadge').textContent=active?'ATIVO':'DESATIVADO';$('sideBotBadge').textContent=active?'ATIVO':'PAUSADO';$('sideBotToggle').textContent=active?'Ⅱ Pausar Bot':'▶ Ativar Bot';$('botIntervalLabel').textContent=c.interval>=60?(c.interval/60)+' hora'+(c.interval>60?'s':''):c.interval+' minutos';$('botPostsToday').textContent=state.share?.used||0;$('botOnlineStatus').textContent=active?'● Configurado':'● Aguardando';$('botHeadline').textContent=active?'Automação configurada 🚀':'Pronto para configurar';$('botStatusHelp').textContent=active?'Preferências salvas. O worker 24h do backend ainda precisa ser ligado.':'Conecte seus canais e escolha os filtros.';$('nextSearch').textContent=active?c.interval+' min':'—';if($('channelCount'))$('channelCount').textContent=(c.useWhats?1:0)+(c.useInstagram?1:0);renderBotActivity()}
-function setBotActive(v){if(!requireAccess())return;localStorage.setItem(BOT_ACTIVE_KEY,v?'1':'0');renderBotV51();toast(v?'Bot configurado como ATIVO. O worker 24h do backend ainda precisa ser ligado.':'Bot pausado.','ok')}
+async function setBotActive(v){
+  if(!requireAccess())return;
+  const toggle=$('botAutoToggle');
+  const sideBtn=$('sideBotToggle');
+  if(toggle)toggle.disabled=true;
+  if(sideBtn)sideBtn.disabled=true;
+  try{
+    const {data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+
+    const action=v?'activate':'pause';
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/bot-automatico`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${session.access_token}`,
+        'apikey':SUPABASE_ANON_KEY
+      },
+      body:JSON.stringify({action})
+    });
+
+    const data=await r.json().catch(()=>({}));
+    console.log('bot-automatico:',r.status,data);
+
+    if(!r.ok || data.success!==true){
+      throw new Error(data.error||`Erro HTTP ${r.status}`);
+    }
+
+    const active=data.bot?.active===true;
+    localStorage.setItem(BOT_ACTIVE_KEY,active?'1':'0');
+    renderBotV51();
+    toast(active?'Bot Automático ativado no servidor.':'Bot Automático pausado.','ok');
+  }catch(e){
+    console.error('Erro ao alterar Bot Automático:',e);
+    localStorage.setItem(BOT_ACTIVE_KEY,'0');
+    if(toggle)toggle.checked=false;
+    renderBotV51();
+    toast('Não foi possível alterar o Bot: '+(e?.message||String(e)),'error');
+  }finally{
+    if(toggle)toggle.disabled=false;
+    if(sideBtn)sideBtn.disabled=false;
+  }
+}
 if($('botAutoToggle'))$('botAutoToggle').onchange=e=>setBotActive(e.target.checked);
 if($('sideBotToggle'))$('sideBotToggle').onclick=()=>setBotActive(!botIsActive());
 if($('openBotConfig'))$('openBotConfig').onclick=()=>{const c=getBotConfig();$('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=!!c.useWhats;$('botUseInstagram').checked=!!c.useInstagram;modal('botConfigModal')};
