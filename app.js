@@ -331,8 +331,91 @@ document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{
   }
 });
 
-async function loadAdmin(){if(!isAdmin())return;const[{data:users,error:ue},{data:errors},{count:postCount},{count:activeSubs}]=await Promise.all([sb.rpc('admin_list_users'),sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(50),sb.from('post_logs').select('*',{count:'exact',head:true}),sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active')]);if(ue)return toast('Admin SQL incompleto: '+ue.message,'error');const arr=users||[];$('adminUsers').textContent=arr.length;$('adminActiveSubs').textContent=activeSubs||0;$('adminPosts').textContent=postCount||0;$('adminErrors').textContent=(errors||[]).length;$('adminUserList').innerHTML=arr.map(u=>`<div class="tableRow"><div><b>${esc(u.name||u.email)}</b><small>${esc(u.email)}</small></div><span class="tag">${esc(u.plan_code||'sem plano')}</span><span>${u.current_period_end?new Date(u.current_period_end).toLocaleDateString('pt-BR'):esc(u.subscription_status||'inactive')}</span><button class="secondary" onclick="adminToggle('${u.user_id}',${!u.is_blocked})">${u.is_blocked?'Liberar':'Bloquear'}</button></div>`).join('')||'<div class="empty">Nenhum usuário.</div>';$('adminErrorList').innerHTML=(errors||[]).map(e=>`<div class="tableRow"><div><b>${esc(e.source)}</b><small>${fmtDate(e.created_at)}</small></div><span>${esc(e.code||'—')}</span><span>${esc(e.message)}</span><span></span></div>`).join('')||'<div class="empty">Nenhum erro.</div>'}
-$('refreshAdmin').onclick=loadAdmin;window.adminToggle=async(userId,blocked)=>{if(!isAdmin())return;const{error}=await sb.rpc('admin_set_user_blocked',{target_user:userId,blocked});if(error)return toast(error.message,'error');await loadAdmin();toast(blocked?'Usuário bloqueado.':'Usuário liberado.','ok')};
+async function loadAdmin(){
+  if(!isAdmin())return;
+
+  const[
+    {data:users,error:ue},
+    {data:errors},
+    {count:postCount},
+    {count:activeSubs}
+  ]=await Promise.all([
+    sb.rpc('admin_list_users'),
+    sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(50),
+    sb.from('post_logs').select('*',{count:'exact',head:true}),
+    sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active')
+  ]);
+
+  if(ue)return toast('Admin SQL incompleto: '+ue.message,'error');
+
+  const arr=users||[];
+  $('adminUsers').textContent=arr.length;
+  $('adminActiveSubs').textContent=activeSubs||0;
+  $('adminPosts').textContent=postCount||0;
+  $('adminErrors').textContent=(errors||[]).length;
+
+  $('adminUserList').innerHTML=arr.map(u=>`
+    <div class="tableRow">
+      <div>
+        <b>${esc(u.name||u.email)}</b>
+        <small>${esc(u.email)}</small>
+      </div>
+
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span class="tag">${esc(u.plan_code||'sem plano')}</span>
+        <span>${u.current_period_end
+          ? new Date(u.current_period_end).toLocaleDateString('pt-BR')
+          : esc(u.subscription_status||'inactive')}</span>
+      </div>
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="secondary" onclick="adminActivatePlan('${u.user_id}','basic')">Básico 30 dias</button>
+        <button class="secondary" onclick="adminActivatePlan('${u.user_id}','pro')">Pro 30 dias</button>
+        <button class="secondary" onclick="adminActivatePlan('${u.user_id}','premium')">Premium 30 dias</button>
+      </div>
+
+      <button class="secondary" onclick="adminToggle('${u.user_id}',${!u.is_blocked})">
+        ${u.is_blocked?'Desbloquear':'Bloquear'}
+      </button>
+    </div>
+  `).join('')||'<div class="empty">Nenhum usuário.</div>';
+
+  $('adminErrorList').innerHTML=(errors||[]).map(e=>`
+    <div class="tableRow">
+      <div><b>${esc(e.source)}</b><small>${fmtDate(e.created_at)}</small></div>
+      <span>${esc(e.code||'—')}</span>
+      <span>${esc(e.message)}</span>
+      <span></span>
+    </div>
+  `).join('')||'<div class="empty">Nenhum erro.</div>';
+}
+
+$('refreshAdmin').onclick=loadAdmin;
+
+window.adminActivatePlan=async(userId,plan)=>{
+  if(!isAdmin())return toast('Acesso administrativo negado.','error');
+
+  const names={basic:'Básico',pro:'Pro',premium:'Premium'};
+  if(!confirm(`Liberar ${names[plan]||plan} por 30 dias para este usuário?`))return;
+
+  const {data,error}=await sb.rpc('admin_activate_subscription',{
+    p_user_id:userId,
+    p_plan:plan
+  });
+
+  if(error)return toast('Não foi possível liberar o plano: '+error.message,'error');
+
+  await loadAdmin();
+  toast(`${names[plan]||plan} liberado por 30 dias.`,'ok');
+};
+
+window.adminToggle=async(userId,blocked)=>{
+  if(!isAdmin())return;
+  const{error}=await sb.rpc('admin_set_user_blocked',{target_user:userId,blocked});
+  if(error)return toast(error.message,'error');
+  await loadAdmin();
+  toast(blocked?'Usuário bloqueado.':'Usuário desbloqueado.','ok');
+};
 
 // V5.1 - painel do Bot Automático
 const BOT_CONFIG_KEY='botAfiliadosV51Config',BOT_ACTIVE_KEY='botAfiliadosV51Active';
