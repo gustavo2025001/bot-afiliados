@@ -215,10 +215,49 @@ document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{
       if(!pix)throw new Error('PIX gerado, mas o código copia e cola não foi retornado.');
 
       const amount=payment.amount!=null?money(payment.amount):'';
-      const text=`PIX ${payment.plan_name||plan}${amount?' - '+amount:''}\n\n${pix}`;
-      try{await navigator.clipboard.writeText(pix);}catch(_e){}
-      window.prompt('PIX gerado com sucesso. Copie o código abaixo e pague no seu banco:',pix);
-      toast('PIX gerado. O código copia e cola foi preparado.','ok');
+
+      let overlay=document.getElementById('pixPaymentOverlay');
+      if(!overlay){
+        overlay=document.createElement('div');
+        overlay.id='pixPaymentOverlay';
+        overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.innerHTML=`
+          <div style="width:min(430px,100%);max-height:92vh;overflow:auto;background:#111522;border:1px solid #343b55;border-radius:18px;padding:24px;color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.55);font-family:inherit">
+            <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:8px">
+              <h2 style="margin:0;font-size:22px">Pagamento PIX</h2>
+              <button id="pixCloseBtn" type="button" style="border:0;background:#242b40;color:#fff;border-radius:9px;padding:8px 12px;cursor:pointer">✕</button>
+            </div>
+            <div id="pixPlanInfo" style="color:#b9c1d9;margin-bottom:18px"></div>
+            <div style="background:#fff;border-radius:14px;padding:14px;width:max-content;max-width:100%;margin:0 auto 18px">
+              <img id="pixQrImage" alt="QR Code PIX" style="display:block;width:260px;height:260px;max-width:68vw;max-height:68vw">
+            </div>
+            <div style="font-size:13px;color:#b9c1d9;margin-bottom:7px">PIX Copia e Cola</div>
+            <textarea id="pixCopyCode" readonly style="box-sizing:border-box;width:100%;height:92px;resize:none;border:1px solid #343b55;border-radius:10px;background:#090c14;color:#fff;padding:11px;font:12px monospace"></textarea>
+            <button id="pixCopyBtn" type="button" style="width:100%;margin-top:12px;border:0;border-radius:10px;padding:13px;background:linear-gradient(90deg,#a21cff,#6545ff);color:#fff;font-weight:800;cursor:pointer">Copiar código PIX</button>
+            <div style="font-size:12px;color:#929bb7;text-align:center;margin-top:12px">Escaneie o QR Code no app do banco ou use o Copia e Cola.</div>
+          </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#pixCloseBtn').onclick=()=>overlay.remove();
+        overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});
+      }
+
+      overlay.querySelector('#pixPlanInfo').textContent=`${payment.plan_name||plan}${amount?' • '+amount:''}`;
+      overlay.querySelector('#pixCopyCode').value=pix;
+      overlay.querySelector('#pixQrImage').src='https://api.qrserver.com/v1/create-qr-code/?size=320x320&data='+encodeURIComponent(pix);
+
+      overlay.querySelector('#pixCopyBtn').onclick=async()=>{
+        try{
+          await navigator.clipboard.writeText(pix);
+          toast('Código PIX copiado.','ok');
+        }catch(_e){
+          const ta=overlay.querySelector('#pixCopyCode');
+          ta.focus(); ta.select();
+          document.execCommand('copy');
+          toast('Código PIX copiado.','ok');
+        }
+      };
+
+      toast('PIX gerado com sucesso.','ok');
       return;
     }
 
