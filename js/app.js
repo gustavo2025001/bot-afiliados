@@ -141,8 +141,8 @@ async function mercadoLivreConnect(){
     const {data:{session}}=await sb.auth.getSession();
     if(!session) return toast('Faça login novamente para conectar o Mercado Livre.','error');
 
-    // A função mercadolivre-callback também inicia o OAuth quando chamada sem ?code=.
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-callback`,{
+    // A função mercadolivre-auth também inicia o OAuth quando chamada sem ?code=.
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-auth`,{
       headers:{
         Authorization:`Bearer ${session.access_token}`,
         apikey:SUPABASE_ANON_KEY
