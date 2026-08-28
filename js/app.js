@@ -150,8 +150,9 @@ async function mercadoLivreConnect(){
     });
     const data=await r.json().catch(()=>({}));
 
-    if(r.ok && data.url){
-      location.href=data.url;
+    const authorizationUrl = data.authorization_url || data.url;
+    if(r.ok && authorizationUrl){
+      location.href=authorizationUrl;
       return;
     }
     toast(data.error||data.message||'Não foi possível iniciar a autorização do Mercado Livre.','error');
