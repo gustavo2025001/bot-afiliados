@@ -13,7 +13,14 @@ const toast=(text,type='')=>{const el=$('toast');el.textContent=text;el.classNam
 const modal=id=>$(id)?.classList.remove('hidden');
 const closeModal=id=>$(id)?.classList.add('hidden');
 const ADMIN_EMAIL='gustavodepaulabarbosag@gmail.com';
-const isAdmin=()=>String(state.user?.email||'').trim().toLowerCase()===ADMIN_EMAIL;
+const ADMIN_USER_ID='b1fa7a00-02fe-4c7c-b2a5-3873eee3f5d1';
+
+const isAdmin=()=>{
+  const email=String(state.user?.email||'').trim().toLowerCase();
+  const userId=String(state.user?.id||'').trim();
+
+  return userId===ADMIN_USER_ID || email===ADMIN_EMAIL;
+};
 const subscriptionActive=()=>!!state.subscription&&state.subscription.status==='active'&&(!state.subscription.current_period_end||new Date(state.subscription.current_period_end)>new Date());
 const hasAccess=()=>isAdmin()||subscriptionActive();
 
