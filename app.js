@@ -64,7 +64,16 @@ function showView(name){if(['offers','products','queue','campaigns','schedules',
 document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>showView(btn.dataset.view));document.querySelectorAll('[data-view-jump]').forEach(btn=>btn.onclick=()=>showView(btn.dataset.viewJump));document.querySelectorAll('[data-open-plans]').forEach(btn=>btn.onclick=()=>showView('plans'));document.querySelectorAll('.closeModal').forEach(btn=>btn.onclick=()=>closeModal(btn.dataset.modal));
 
 async function loadShareStatus(){const{data,error}=await sb.rpc('get_share_status');if(error){state.share={used:0,limit:null,unlimited:isAdmin(),allowed:hasAccess(),plan:isAdmin()?'admin':null};return}const r=Array.isArray(data)?data[0]:data;if(r)state.share={used:Number(r.used||0),limit:r.daily_limit==null?null:Number(r.daily_limit),unlimited:!!r.unlimited,allowed:!!r.allowed,plan:r.plan_code};renderUsage()}
-function renderUsage(){const s=state.share;const label=s.unlimited?`${s.used} / ILIMITADO`:`${s.used} / ${s.limit??'—'}`;$('dailyUsage').textContent=label;$('todayPostCount').textContent=s.used;const pct=s.unlimited?Math.min(s.used,100):s.limit?Math.min(100,(s.used/s.limit)*100):0;$('usageBar').style.width=pct+'%';$('planCardHelp').textContent=s.unlimited?'Compartilhamentos ilimitados por dia.':s.limit?`Limite diário: ${s.limit}. Reinicia no dia seguinte.`:'Escolha um plano para liberar as funções.'}
+function renderUsage(){
+  const s=state.share;
+  const label=s.unlimited?`${s.used} / ILIMITADO`:`${s.used} / ${s.limit??'—'}`;
+  const daily=$('dailyUsage'); if(daily)daily.textContent=label;
+  const today=$('todayPostCount'); if(today)today.textContent=s.used;
+  const pct=s.unlimited?Math.min(s.used,100):s.limit?Math.min(100,(s.used/s.limit)*100):0;
+  const bar=$('usageBar'); if(bar)bar.style.width=pct+'%';
+  const help=$('planCardHelp');
+  if(help)help.textContent=s.unlimited?'Compartilhamentos ilimitados por dia.':s.limit?`Limite diário: ${s.limit}. Reinicia no dia seguinte.`:'Escolha um plano para liberar as funções.';
+}
 
 function parseOfferText(text){const url=(text.match(/https?:\/\/\S+/)||[])[0]?.replace(/[),.!]+$/,'');if(!url)return null;const priceMatch=text.match(/(?:por|agora|de)\s+(R\$\s?[\d.,]+)/i)||text.match(/(R\$\s?[\d.,]+)/i);const nums=[...text.matchAll(/R\$\s?([\d.,]+)/gi)].map(m=>Number(m[1].replace(/\./g,'').replace(',','.'))).filter(Number.isFinite);const current=nums.length?nums[nums.length-1]:0,old=nums.length>1?nums[0]:0;const title=text.replace(url,'').replace(/^Dê uma olhada em\s*/i,'').split(/\s+(?:por|de)\s+R\$/i)[0].trim();return{title:title||'Oferta importada',price:current,old_price:old>current?old:0,discount_percent:old>current?Math.round((1-current/old)*100):0,affiliate_url:url,platform:/mercadolivre|mercadolivre\.com/i.test(url)?'mercadolivre':'shopee'}}
 $('parseOffer').onclick=()=>{const p=parseOfferText($('pPaste').value);if(!p)return toast('Não encontrei um link válido no texto.','error');$('pTitle').value=p.title;$('pPrice').value=String(p.price||'').replace('.',',');$('pOldPrice').value=String(p.old_price||'').replace('.',',');$('pDiscount').value=p.discount_percent||'';$('pLink').value=p.affiliate_url;$('pPlatform').value=p.platform;toast('Oferta lida. Confira os dados e salve.','ok')};
@@ -96,14 +105,29 @@ $('syncOffers').onclick=syncOffers;$('syncOffers2').onclick=syncOffers;
 function fillCampaignProducts(){$('cProduct').innerHTML='<option value="">Sem produto</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}
 $('newCampaign').onclick=()=>{if(!requireAccess())return;fillCampaignProducts();modal('campaignModal')};$('cProduct').onchange=()=>{const p=state.products.find(x=>x.id===$('cProduct').value);if(p&&!$('cMessage').value.trim())$('cMessage').value=adMessage(p)};
 async function loadCampaigns(){const{data,error}=await sb.from('campaigns').select('*,products(title)').order('created_at',{ascending:false});if(error){renderDbError('campaignList','Campanhas',error);return}state.campaigns=data||[];renderCampaigns()}
-function renderCampaigns(){if(!$('campaignList'))return;$('campaignCount').textContent=state.campaigns.length;$('campaignList').innerHTML=state.campaigns.map(c=>`<div class="tableRow"><div><b>${esc(c.name)}</b><small>${esc(c.products?.title||'Sem produto')}</small></div><span>${esc((c.channels||[]).join(', '))}</span><span class="tag">${esc(c.status)}</span><button class="dangerBtn" onclick="deleteCampaign('${c.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhuma campanha criada.</div>'}
+function renderCampaigns(){
+  const list=$('campaignList');
+  if(!list)return;
+  const count=$('campaignCount');
+  if(count)count.textContent=state.campaigns.length;
+  list.innerHTML=state.campaigns.map(c=>`<div class="tableRow"><div><b>${esc(c.name)}</b><small>${esc(c.products?.title||'Sem produto')}</small></div><span>${esc((c.channels||[]).join(', '))}</span><span class="tag">${esc(c.status)}</span><button class="dangerBtn" onclick="deleteCampaign('${c.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhuma campanha criada.</div>';
+}
 $('saveCampaign').onclick=async()=>{if(!requireAccess())return;const name=$('cName').value.trim(),message=$('cMessage').value.trim(),channels=[...document.querySelectorAll('input[name="channel"]:checked')].map(x=>x.value);if(!name||!message||!channels.length)return $('cMsg').textContent='Informe nome, mensagem e ao menos um canal.';const{error}=await sb.from('campaigns').insert({user_id:state.user.id,name,product_id:$('cProduct').value||null,message,channels,status:'ready'});if(error)return $('cMsg').textContent=error.message;$('cName').value=$('cMessage').value='';document.querySelectorAll('input[name="channel"]').forEach(x=>x.checked=false);closeModal('campaignModal');await loadCampaigns();toast('Campanha criada.','ok')};
 window.deleteCampaign=async id=>{if(!confirm('Excluir esta campanha?'))return;const{error}=await sb.from('campaigns').delete().eq('id',id);if(error)return toast(error.message,'error');await Promise.all([loadCampaigns(),loadSchedules()])};
 
 function fillScheduleCampaigns(){$('sCampaign').innerHTML=state.campaigns.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')||'<option value="">Crie uma campanha primeiro</option>'}
 $('newSchedule').onclick=()=>{if(!requireAccess())return;fillScheduleCampaigns();modal('scheduleModal')};
 async function loadSchedules(){const{data,error}=await sb.from('schedules').select('*,campaigns(name)').order('scheduled_for',{ascending:true});if(error){renderDbError('scheduleList','Agendamentos',error);return}state.schedules=data||[];renderSchedules()}
-function renderSchedules(){if(!$('scheduleList'))return;const pending=state.schedules.filter(s=>s.status==='pending');$('scheduleCount').textContent=pending.length;$('scheduleList').innerHTML=state.schedules.map(s=>`<div class="tableRow"><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">${esc(s.status)}</span><span>${esc(s.timezone||'America/Sao_Paulo')}</span><button class="dangerBtn" onclick="deleteSchedule('${s.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>';$('scheduleListMini').innerHTML=pending.slice(0,5).map(s=>`<div class="miniOffer"><div class="miniThumb">◷</div><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">PENDENTE</span></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>'}
+function renderSchedules(){
+  const list=$('scheduleList');
+  if(!list)return;
+  const pending=state.schedules.filter(s=>s.status==='pending');
+  const count=$('scheduleCount');
+  if(count)count.textContent=pending.length;
+  list.innerHTML=state.schedules.map(s=>`<div class="tableRow"><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">${esc(s.status)}</span><span>${esc(s.timezone||'America/Sao_Paulo')}</span><button class="dangerBtn" onclick="deleteSchedule('${s.id}')">Excluir</button></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>';
+  const mini=$('scheduleListMini');
+  if(mini)mini.innerHTML=pending.slice(0,5).map(s=>`<div class="miniOffer"><div class="miniThumb">◷</div><div><b>${esc(s.campaigns?.name||'Campanha')}</b><small>${fmtDate(s.scheduled_for)}</small></div><span class="tag">PENDENTE</span></div>`).join('')||'<div class="empty">Nenhum agendamento.</div>';
+}
 $('saveSchedule').onclick=async()=>{if(!requireAccess())return;const campaign_id=$('sCampaign').value,when=$('sWhen').value;if(!campaign_id||!when)return $('sMsg').textContent='Selecione a campanha e a data.';const d=new Date(when);if(d<=new Date())return $('sMsg').textContent='Escolha uma data futura.';const{error}=await sb.from('schedules').insert({user_id:state.user.id,campaign_id,scheduled_for:d.toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Sao_Paulo',status:'pending'});if(error)return $('sMsg').textContent=error.message;closeModal('scheduleModal');$('sWhen').value='';await loadSchedules();toast('Agendamento criado.','ok')};
 window.deleteSchedule=async id=>{if(!confirm('Excluir este agendamento?'))return;const{error}=await sb.from('schedules').delete().eq('id',id);if(error)return toast(error.message,'error');await loadSchedules()};
 
