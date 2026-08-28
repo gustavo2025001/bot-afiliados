@@ -1,0 +1,12 @@
+CORREÇÃO V5.1 - STATUS MERCADO LIVRE
+
+1) Substitua os arquivos do GitHub pelos deste ZIP.
+2) Depois do deploy, abra o bot no MESMO navegador em que o OAuth foi concluído.
+3) Se a URL ainda tiver ?ml=connected, o painel grava a conexão e passa a mostrar Conectada.
+4) A Edge Function mercadolivre-status continua sendo consultada normalmente.
+
+IMPORTANTE:
+A correção evita o painel voltar visualmente para Pendente quando o status remoto falha.
+Para a conexão real sobreviver em qualquer navegador/dispositivo e permitir importação automática,
+o backend precisa ter a tabela public.mercadolivre_tokens e o callback precisa salvar o token nela.
+Os arquivos SQL e Edge Functions necessários continuam incluídos em /supabase.

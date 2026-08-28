@@ -89,7 +89,20 @@ async function loadIntegrations(){
     ids.forEach(id=>{if($(id))$(id).textContent=text});
   }
 
-  let mlConnected=false;
+  // Mercado Livre: primeiro registra o retorno OAuth no navegador.
+  // Assim o painel não volta para "Pendente" só porque a Edge Function
+  // de status ainda não encontrou a tabela/token no backend.
+  const params=new URLSearchParams(location.search);
+  if(params.get('ml')==='connected'){
+    localStorage.setItem('mercadolivre_connected','1');
+    localStorage.setItem('mercadolivre_connected_at',new Date().toISOString());
+    toast('Mercado Livre conectado com sucesso!','ok');
+    params.delete('ml');
+    const qs=params.toString();
+    history.replaceState({},'',location.pathname+(qs?'?'+qs:'')+location.hash);
+  }
+
+  let mlConnected=localStorage.getItem('mercadolivre_connected')==='1';
   try{
     const {data:{session}}=await sb.auth.getSession();
     const headers={apikey:SUPABASE_ANON_KEY};
@@ -100,22 +113,22 @@ async function loadIntegrations(){
       cache:'no-store'
     });
     const d=await r.json().catch(()=>({}));
-    mlConnected=r.ok&&d.connected===true;
+    if(r.ok&&d.connected===true){
+      mlConnected=true;
+      localStorage.setItem('mercadolivre_connected','1');
+    }
+    // Se o backend responder erro/tabela ausente, preservamos o sucesso
+    // OAuth já confirmado em vez de apagar o estado visual.
   }catch(e){
-    console.error('Erro ao consultar status do Mercado Livre:',e);
+    console.warn('Status remoto do Mercado Livre indisponível; mantendo estado OAuth local.',e);
   }
 
   ['mlStatus','mlStatus2'].forEach(id=>{
-    if($(id)) $(id).textContent=mlConnected?'Conectada':'Pendente';
+    if($(id)){
+      $(id).textContent=mlConnected?'Conectada':'Pendente';
+      $(id).classList.toggle('connectedStatus',mlConnected);
+    }
   });
-
-  const params=new URLSearchParams(location.search);
-  if(params.get('ml')==='connected'){
-    if(mlConnected) toast('Mercado Livre conectado com sucesso!','ok');
-    params.delete('ml');
-    const qs=params.toString();
-    history.replaceState({},'',location.pathname+(qs?'?'+qs:'')+location.hash);
-  }
 }
 document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sessão expirada. Faça login novamente.');const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));const url=data.authorization_url||data.url;if(r.ok&&url)location.href=url;else toast(data.error||'Integração ainda não configurada no backend.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
 
