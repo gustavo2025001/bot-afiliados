@@ -12,7 +12,8 @@ const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
 const toast=(text,type='')=>{const el=$('toast');el.textContent=text;el.className='toast '+type;clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),4200)};
 const modal=id=>$(id)?.classList.remove('hidden');
 const closeModal=id=>$(id)?.classList.add('hidden');
-const isAdmin=()=>state.profile?.role==='admin';
+const ADMIN_EMAIL='gustavodepaulabarbosag@gmail.com';
+const isAdmin=()=>String(state.user?.email||'').trim().toLowerCase()===ADMIN_EMAIL;
 const subscriptionActive=()=>!!state.subscription&&state.subscription.status==='active'&&(!state.subscription.current_period_end||new Date(state.subscription.current_period_end)>new Date());
 const hasAccess=()=>isAdmin()||subscriptionActive();
 
@@ -25,7 +26,41 @@ $('loginBtn').onclick=async()=>{const{data,error}=await sb.auth.signInWithPasswo
 $('forgotBtn').onclick=async()=>{const email=$('loginEmail').value.trim();if(!email)return $('msg').textContent='Digite seu e-mail primeiro.';const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});$('msg').textContent=error?error.message:'Link de recuperação enviado.'};
 $('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
 
-async function boot(user){state.user=user;$('authShell').classList.add('hidden');$('panel').classList.remove('hidden');const n=user.user_metadata?.name||user.email?.split('@')[0]||'Usuário';$('welcome').textContent=n+' 👋';$('sideName').textContent=n;await loadAccount();enforceGate();if(isAdmin())document.querySelectorAll('.adminOnly').forEach(x=>x.classList.remove('hidden'));await Promise.all([loadProducts(),loadCampaigns(),loadSchedules(),loadPosts(),loadIntegrations(),loadShareStatus()]);if(isAdmin())loadAdmin();renderAll()}
+async function boot(user){
+  state.user=user;
+  $('authShell').classList.add('hidden');
+  $('panel').classList.remove('hidden');
+
+  const n=user.user_metadata?.name||user.email?.split('@')[0]||'Usuário';
+  $('welcome').textContent=n+' 👋';
+  $('sideName').textContent=n;
+
+  // Segurança visual: começa escondendo tudo que é exclusivo do Admin.
+  document.querySelectorAll('.adminOnly').forEach(x=>x.classList.add('hidden'));
+
+  await loadAccount();
+  enforceGate();
+
+  // Somente o e-mail administrador pode enxergar a Área Admin.
+  if(isAdmin()){
+    document.querySelectorAll('.adminOnly').forEach(x=>x.classList.remove('hidden'));
+  }else{
+    // Se uma conta comum estiver numa tela admin por qualquer motivo, volta ao Dashboard.
+    if($('view-admin')?.classList.contains('active')) showView('dashboard');
+  }
+
+  await Promise.all([
+    loadProducts(),
+    loadCampaigns(),
+    loadSchedules(),
+    loadPosts(),
+    loadIntegrations(),
+    loadShareStatus()
+  ]);
+
+  if(isAdmin()) await loadAdmin();
+  renderAll();
+}
 async function loadAccount(){const[{data:profile,error:pe},{data:sub}]=await Promise.all([sb.from('profiles').select('*').eq('id',state.user.id).maybeSingle(),sb.from('subscriptions').select('*').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(1).maybeSingle()]);if(pe)toast('Execute o SQL atualizado no Supabase: '+pe.message,'error');state.profile=profile;state.subscription=sub}
 function enforceGate(){
   const active=hasAccess();
