@@ -104,23 +104,28 @@ async function loadIntegrations(){
 
   let mlConnected=localStorage.getItem('mercadolivre_connected')==='1';
   try{
-    const {data:{session}}=await sb.auth.getSession();
-    const headers={apikey:SUPABASE_ANON_KEY};
-    if(session?.access_token) headers.Authorization=`Bearer ${session.access_token}`;
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-status`,{
+    // Consulta direta ao endpoint que já foi validado manualmente.
+    // Cache-buster evita resposta antiga do navegador/GitHub Pages.
+    const statusUrl=`${SUPABASE_URL}/functions/v1/mercadolivre-status?t=${Date.now()}`;
+    const r=await fetch(statusUrl,{
       method:'GET',
-      headers,
-      cache:'no-store'
+      cache:'no-store',
+      headers:{'Accept':'application/json'}
     });
     const d=await r.json().catch(()=>({}));
-    if(r.ok&&d.connected===true){
+
+    console.log('Mercado Livre status:',r.status,d);
+
+    if(r.ok && (d.connected===true || d.status==='connected')){
       mlConnected=true;
       localStorage.setItem('mercadolivre_connected','1');
+      localStorage.setItem('mercadolivre_connected_at',new Date().toISOString());
+    }else if(r.ok && d.connected===false){
+      mlConnected=false;
+      localStorage.removeItem('mercadolivre_connected');
     }
-    // Se o backend responder erro/tabela ausente, preservamos o sucesso
-    // OAuth já confirmado em vez de apagar o estado visual.
   }catch(e){
-    console.warn('Status remoto do Mercado Livre indisponível; mantendo estado OAuth local.',e);
+    console.warn('Falha ao consultar mercadolivre-status; mantendo último estado confirmado.',e);
   }
 
   ['mlStatus','mlStatus2'].forEach(id=>{
