@@ -199,12 +199,21 @@ document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{
   try{
     const plan=btn.dataset.plan;
     const method=btn.dataset.method;
-
     // PIX usa a Edge Function pix-create já validada no Supabase.
     if(method==='pix'){
+      const {data:{session}}=await sb.auth.getSession();
+
+      if(!session?.access_token){
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
       const r=await fetch(`${SUPABASE_URL}/functions/v1/pix-create`,{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':`Bearer ${session.access_token}`,
+          'apikey':SUPABASE_ANON_KEY
+        },
         body:JSON.stringify({plan})
       });
       const data=await r.json().catch(()=>({}));
