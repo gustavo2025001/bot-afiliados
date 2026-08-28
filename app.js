@@ -78,7 +78,45 @@ window.deleteSchedule=async id=>{if(!confirm('Excluir este agendamento?'))return
 
 async function loadPosts(){const{data,error}=await sb.from('post_logs').select('*').order('created_at',{ascending:false}).limit(100);if(error){renderDbError('postList','Histórico',error);return}state.posts=data||[];renderPosts()}
 function renderPosts(){if(!$('postList'))return;$('postList').innerHTML=state.posts.map(p=>`<div class="tableRow"><div><b>${esc(p.provider)}</b><small>${fmtDate(p.created_at)}</small></div><span class="tag">${esc(p.status)}</span><span>${esc(p.response_meta?.title||p.external_id||'—')}</span><span>${esc(p.error_message||'')}</span></div>`).join('')||'<div class="empty">Nenhum compartilhamento registrado.</div>'}
-async function loadIntegrations(){const{data,error}=await sb.from('integrations').select('provider,status,updated_at');if(error)return;state.integrations=data||[];for(const provider of ['shopee','mercadolivre','whatsapp']){const rec=state.integrations.find(x=>x.provider===provider);let text=provider==='whatsapp'&&!rec?'Assistido':rec?.status==='connected'?'Conectada':'Pendente';const ids=provider==='shopee'?['shopeeStatus','shopeeStatus2']:provider==='mercadolivre'?['mlStatus','mlStatus2']:['waStatus','waStatus2'];ids.forEach(id=>{if($(id))$(id).textContent=text})}}
+async function loadIntegrations(){
+  const {data,error}=await sb.from('integrations').select('provider,status,updated_at');
+  state.integrations=error?[]:(data||[]);
+
+  for(const provider of ['shopee','whatsapp']){
+    const rec=state.integrations.find(x=>x.provider===provider);
+    const text=provider==='whatsapp'&&!rec?'Assistido':rec?.status==='connected'?'Conectada':'Pendente';
+    const ids=provider==='shopee'?['shopeeStatus','shopeeStatus2']:['waStatus','waStatus2'];
+    ids.forEach(id=>{if($(id))$(id).textContent=text});
+  }
+
+  let mlConnected=false;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const headers={apikey:SUPABASE_ANON_KEY};
+    if(session?.access_token) headers.Authorization=`Bearer ${session.access_token}`;
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/mercadolivre-status`,{
+      method:'GET',
+      headers,
+      cache:'no-store'
+    });
+    const d=await r.json().catch(()=>({}));
+    mlConnected=r.ok&&d.connected===true;
+  }catch(e){
+    console.error('Erro ao consultar status do Mercado Livre:',e);
+  }
+
+  ['mlStatus','mlStatus2'].forEach(id=>{
+    if($(id)) $(id).textContent=mlConnected?'Conectada':'Pendente';
+  });
+
+  const params=new URLSearchParams(location.search);
+  if(params.get('ml')==='connected'){
+    if(mlConnected) toast('Mercado Livre conectado com sucesso!','ok');
+    params.delete('ml');
+    const qs=params.toString();
+    history.replaceState({},'',location.pathname+(qs?'?'+qs:'')+location.hash);
+  }
+}
 document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sessão expirada. Faça login novamente.');const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));const url=data.authorization_url||data.url;if(r.ok&&url)location.href=url;else toast(data.error||'Integração ainda não configurada no backend.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
 
 document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{const old=btn.textContent;btn.disabled=true;btn.textContent='Preparando...';try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({plan:btn.dataset.plan,method:btn.dataset.method,return_url:location.href})});const data=await r.json().catch(()=>({}));if(r.ok&&data.checkout_url)location.href=data.checkout_url;else toast(data.error||'Gateway ainda não configurado.','error')}catch(e){toast('Checkout indisponível: '+e.message,'error')}finally{btn.disabled=false;btn.textContent=old}});
