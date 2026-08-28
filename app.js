@@ -12,7 +12,7 @@ const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
 const toast=(text,type='')=>{const el=$('toast');el.textContent=text;el.className='toast '+type;clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),4200)};
 const modal=id=>$(id)?.classList.remove('hidden');
 const closeModal=id=>$(id)?.classList.add('hidden');
-const ADMIN_EMAIL='gustavodepaulabarbosag@gmail.com';
+const ADMIN_EMAIL='gustavobarbosagustavodepaulaba@gmail.com';
 const ADMIN_USER_ID='b1fa7a00-02fe-4c7c-b2a5-3873eee3f5d1';
 
 const isAdmin=()=>{
