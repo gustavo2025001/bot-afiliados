@@ -1,0 +1,11 @@
+BOT AFILIADOS V5.1.4
+
+Correção:
+- Corrigido o erro JavaScript em enforceGate:
+  Cannot set properties of null (setting 'textContent')
+- Elementos opcionais que não existem mais no HTML não interrompem o boot.
+- O restante do boot pode continuar, incluindo loadIntegrations().
+- Mantida a consulta do mercadolivre-status.
+- index.html atualizado para app.js?v=5.1.4 para evitar cache.
+
+Não altera OAuth, tokens, Secrets ou callback do Mercado Livre.
