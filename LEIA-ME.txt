@@ -1,13 +1,7 @@
-BOT AFILIADOS MULTIPLATAFORMA V5
+BOT AFILIADOS - arquivos PIX
 
-Atualização baseada na sua V5 original.
-- Shopee + Mercado Livre no mesmo catálogo
-- Detecção automática da plataforma pelo link
-- Filtros por plataforma
-- Mensagens adaptadas para cada loja
-- Fila, favoritos, histórico e gerador mantidos
-- Área APIs/Integrações com Mercado Livre
-- Client Secret NÃO deve ser colocado no HTML; use backend seguro
-- Preparado para futura hospedagem online e OAuth
+Conteudo:
+- index.html
+- app.js
 
-Abra index.html para testar localmente.
+IMPORTANTE: mantenha no GitHub o style.css e todos os demais arquivos/assets da versao que ja estava funcionando. Este ZIP nao substitui o restante do projeto.

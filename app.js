@@ -192,7 +192,54 @@ async function loadIntegrations(){
 }
 document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sessão expirada. Faça login novamente.');const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));const url=data.authorization_url||data.url;if(r.ok&&url)location.href=url;else toast(data.error||'Integração ainda não configurada no backend.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
 
-document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{const old=btn.textContent;btn.disabled=true;btn.textContent='Preparando...';try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({plan:btn.dataset.plan,method:btn.dataset.method,return_url:location.href})});const data=await r.json().catch(()=>({}));if(r.ok&&data.checkout_url)location.href=data.checkout_url;else toast(data.error||'Gateway ainda não configurado.','error')}catch(e){toast('Checkout indisponível: '+e.message,'error')}finally{btn.disabled=false;btn.textContent=old}});
+document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{
+  const old=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='Preparando...';
+  try{
+    const plan=btn.dataset.plan;
+    const method=btn.dataset.method;
+
+    // PIX usa a Edge Function pix-create já validada no Supabase.
+    if(method==='pix'){
+      const r=await fetch(`${SUPABASE_URL}/functions/v1/pix-create`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({plan})
+      });
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok||data.success!==true)throw new Error(data.error||`Erro HTTP ${r.status}`);
+
+      const payment=data.payment||{};
+      const pix=payment.pix_copy_paste||payment.copy_paste||payment.qr_code||'';
+      if(!pix)throw new Error('PIX gerado, mas o código copia e cola não foi retornado.');
+
+      const amount=payment.amount!=null?money(payment.amount):'';
+      const text=`PIX ${payment.plan_name||plan}${amount?' - '+amount:''}\n\n${pix}`;
+      try{await navigator.clipboard.writeText(pix);}catch(_e){}
+      window.prompt('PIX gerado com sucesso. Copie o código abaixo e pague no seu banco:',pix);
+      toast('PIX gerado. O código copia e cola foi preparado.','ok');
+      return;
+    }
+
+    // Cartão continua no checkout antigo até o gateway de cartão ser conectado.
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},
+      body:JSON.stringify({plan,method,return_url:location.href})
+    });
+    const data=await r.json().catch(()=>({}));
+    if(r.ok&&data.checkout_url)location.href=data.checkout_url;
+    else throw new Error(data.error||'Gateway de cartão ainda não configurado.');
+  }catch(e){
+    toast('Checkout indisponível: '+(e?.message||String(e)),'error');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=old;
+  }
+});
 
 async function loadAdmin(){if(!isAdmin())return;const[{data:users,error:ue},{data:errors},{count:postCount},{count:activeSubs}]=await Promise.all([sb.rpc('admin_list_users'),sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(50),sb.from('post_logs').select('*',{count:'exact',head:true}),sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active')]);if(ue)return toast('Admin SQL incompleto: '+ue.message,'error');const arr=users||[];$('adminUsers').textContent=arr.length;$('adminActiveSubs').textContent=activeSubs||0;$('adminPosts').textContent=postCount||0;$('adminErrors').textContent=(errors||[]).length;$('adminUserList').innerHTML=arr.map(u=>`<div class="tableRow"><div><b>${esc(u.name||u.email)}</b><small>${esc(u.email)}</small></div><span class="tag">${esc(u.plan_code||'sem plano')}</span><span>${u.current_period_end?new Date(u.current_period_end).toLocaleDateString('pt-BR'):esc(u.subscription_status||'inactive')}</span><button class="secondary" onclick="adminToggle('${u.user_id}',${!u.is_blocked})">${u.is_blocked?'Liberar':'Bloquear'}</button></div>`).join('')||'<div class="empty">Nenhum usuário.</div>';$('adminErrorList').innerHTML=(errors||[]).map(e=>`<div class="tableRow"><div><b>${esc(e.source)}</b><small>${fmtDate(e.created_at)}</small></div><span>${esc(e.code||'—')}</span><span>${esc(e.message)}</span><span></span></div>`).join('')||'<div class="empty">Nenhum erro.</div>'}
 $('refreshAdmin').onclick=loadAdmin;window.adminToggle=async(userId,blocked)=>{if(!isAdmin())return;const{error}=await sb.rpc('admin_set_user_blocked',{target_user:userId,blocked});if(error)return toast(error.message,'error');await loadAdmin();toast(blocked?'Usuário bloqueado.':'Usuário liberado.','ok')};
