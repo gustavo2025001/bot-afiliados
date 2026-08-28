@@ -476,3 +476,7 @@ document.querySelectorAll('.channelSoon').forEach(btn=>btn.onclick=()=>toast('Ca
 
 function renderDbError(id,label,error){const el=$(id);if(el)el.innerHTML=`<div class="empty">${esc(label)} indisponível: ${esc(error.message)}<br>Execute o SQL atualizado.</div>`}
 sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT')state.user=null;if(event==='SIGNED_IN'&&session?.user&&!state.user)boot(session.user)});(async()=>{const{data}=await sb.auth.getSession();if(data.session?.user)boot(data.session.user)})();
+
+// Premium Dashboard bridge: visual shortcuts reuse existing bot controls.
+document.getElementById('setupOpenConfig')?.addEventListener('click',()=>document.getElementById('openBotConfig')?.click());
+document.getElementById('setupActivateBot')?.addEventListener('click',()=>document.getElementById('sideBotToggle')?.click());

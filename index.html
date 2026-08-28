@@ -68,36 +68,39 @@
 
     <div id="subscriptionGate" class="gateBanner hidden"><div><b>🔒 Funções bloqueadas</b><span>Escolha um plano ativo para liberar ofertas, campanhas, fila e automações.</span></div><button data-open-plans class="primary compact">Ver planos</button></div>
 
-    <section class="view active" id="view-dashboard">
-<section class="kpis vividKpis">
-<article class="kpiPurple"><small>🏷 OFERTAS ENCONTRADAS</small><strong id="offerCount">0</strong><em>Catálogo atualizado</em></article>
-<article class="kpiBlue"><small>☷ NA FILA</small><strong id="queueCount">0</strong><em>Aguardando postagem</em></article>
-<article class="kpiGreen"><small>➤ POSTADAS HOJE</small><strong id="todayPostCount">0</strong><em>Ver histórico</em></article>
-<article class="kpiOrange"><small>👥 GRUPOS/CANAIS</small><strong id="channelCount">0</strong><em>Configurados</em></article>
-</section>
-<div class="v51Grid">
-<article class="panelCard botControl">
-<div class="boxTitle"><div><span class="sectionKicker">🤖 AUTOMAÇÃO 24H</span><h2>BOT AUTOMÁTICO <span id="botActiveBadge" class="tag">DESATIVADO</span></h2></div><button id="openBotConfig" class="secondary">⚙ Configurações</button></div>
-<p class="muted">Escolha como o bot deve procurar, filtrar e preparar ofertas. A publicação automática depende dos canais/APIs autorizados no backend.</p>
-<div class="botStatusStrip">
-<label class="switchLine"><input id="botAutoToggle" type="checkbox"><span class="switch"></span><b id="botToggleText">BOT DESATIVADO</b></label>
-<div><small>Próxima busca</small><b id="nextSearch">—</b></div><div><small>Intervalo</small><b id="botIntervalLabel">15 minutos</b></div><div><small>Publicações hoje</small><b id="botPostsToday">0</b></div><div><small>Status</small><b id="botOnlineStatus">● Aguardando</b></div>
-</div>
-<div class="howBot"><h3>ℹ COMO FUNCIONA O BOT AUTOMÁTICO?</h3><div class="botFlow">
-<div><b>1</b><span>🔎</span><strong>Busca ofertas</strong><small>Pesquisa nas lojas conectadas.</small></div><i>→</i>
-<div><b>2</b><span>🔻</span><strong>Filtra e analisa</strong><small>Desconto, preço e repetidos.</small></div><i>→</i>
-<div><b>3</b><span>📝</span><strong>Gera anúncio</strong><small>Prepara título, preço e link.</small></div><i>→</i>
-<div><b>4</b><span>☷</span><strong>Adiciona à fila</strong><small>Organiza a sequência.</small></div><i>→</i>
-<div><b>5</b><span>🔗</span><strong>Publica</strong><small>Usa canais autorizados.</small></div><i>→</i>
-<div><b>6</b><span>📊</span><strong>Registra e repete</strong><small>Evita duplicados e cria histórico.</small></div>
-</div><div class="botTip">💡 <b>Dica:</b> você pode pausar o bot a qualquer momento e ajustar os filtros nas configurações.</div></div>
-</article>
-<aside class="panelCard botSideStatus"><div class="boxTitle"><h3>Status do Bot</h3><span id="sideBotBadge" class="tag">PAUSADO</span></div><div class="botOrb">🤖</div><h3 id="botHeadline">Pronto para configurar</h3><p class="muted" id="botStatusHelp">Conecte seus canais e escolha os filtros.</p><button id="sideBotToggle" class="primary full">▶ Ativar Bot</button><button data-view-jump="reports" class="secondary full">☷ Ver histórico</button></aside>
-<article class="panelCard recentOffersV51"><div class="boxTitle"><h3>🔥 Ofertas encontradas recentemente</h3><button class="textBtn" data-view-jump="offers">Ver todas</button></div><div id="offerListMini" class="offerMini"></div></article>
-<aside class="panelCard activityV51"><div class="boxTitle"><h3>Atividade em tempo real</h3></div><div id="botActivity" class="activityList"><div class="empty">Aguardando atividade...</div></div><button data-view-jump="reports" class="secondary full">Ver todas as atividades</button></aside>
-<article class="panelCard quickV51"><div class="boxTitle"><h3>Ações rápidas</h3></div><div class="quickV51Btns"><button id="syncOffers" class="primary protectedAction">🔎 Buscar ofertas agora</button><button id="quickProduct" class="secondary protectedAction">＋ Adicionar produto manual</button><button id="quickCampaign" class="secondary protectedAction">➤ Nova campanha</button><button data-view-jump="queue" class="secondary protectedAction">☷ Ver fila de postagens</button></div></article>
-<article class="panelCard newUserHelp"><b>⭐ NOVO POR AQUI?</b><span>Confira o passo a passo e entenda cada função do bot.</span><button data-view-jump="tutorials" class="secondary">🎓 Ver tutoriais</button></article>
-</div></section>
+    <section class="view active premiumDashboard" id="view-dashboard">
+      <section class="setupHero panelCard">
+        <div class="setupTitle"><div><h2>Comece em 4 passos simples</h2><p>Configure uma vez e deixe o bot trabalhar por você.</p></div></div>
+        <div class="setupSteps">
+          <button class="setupStep" data-view-jump="integrations"><b>1</b><span><strong>Conectar contas</strong><small>Shopee, Mercado Livre e integrações</small><em>Abrir integrações</em></span></button><i>→</i>
+          <button class="setupStep" data-view-jump="channels"><b>2</b><span><strong>Escolher canais</strong><small>Selecione seus grupos e canais</small><em>Escolher canais</em></span></button><i>→</i>
+          <button class="setupStep" id="setupOpenConfig"><b>3</b><span><strong>Configurar ofertas</strong><small>Categorias, preço, desconto e filtros</small><em>Configurar</em></span></button><i>→</i>
+          <button class="setupStep" id="setupActivateBot"><b>4</b><span><strong>Ativar bot</strong><small>Ligue o automático e acompanhe</small><em>Ativar agora</em></span></button>
+        </div>
+      </section>
+
+      <div class="premiumDashGrid">
+        <main class="premiumCenter">
+          <section class="kpis premiumKpis">
+            <article><span class="metricIcon purple">◇</span><div><small>Ofertas encontradas</small><strong id="offerCount">0</strong><em>Catálogo atualizado</em></div></article>
+            <article><span class="metricIcon blue">☷</span><div><small>Na fila</small><strong id="queueCount">0</strong><em>Aguardando publicação</em></div></article>
+            <article><span class="metricIcon green">➤</span><div><small>Publicadas hoje</small><strong id="todayPostCount">0</strong><em>Limite do plano</em></div></article>
+            <article><span class="metricIcon orange">◉</span><div><small>Grupos/Canais</small><strong id="channelCount">0</strong><em>Configurados</em></div></article>
+          </section>
+          <div class="premiumContentGrid">
+            <article class="panelCard recentOffersV51"><div class="boxTitle"><h3>Ofertas encontradas recentemente</h3><button class="textBtn" data-view-jump="offers">Ver todas</button></div><div id="offerListMini" class="offerMini"></div></article>
+            <article class="panelCard activityV51"><div class="boxTitle"><h3>Atividade em tempo real</h3><button class="textBtn" data-view-jump="reports">Ver todas</button></div><div id="botActivity" class="activityList"><div class="empty">Aguardando atividade...</div></div></article>
+          </div>
+          <article class="panelCard performanceCard"><div class="boxTitle"><h3>Desempenho de hoje</h3></div><div class="performanceBody"><div class="fakeChart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div><small>Publicações</small><strong id="botPostsToday">0</strong><em>hoje</em></div><div><small>Intervalo</small><strong id="botIntervalLabel">15 minutos</strong><em>configurado</em></div><div><small>Próxima busca</small><strong id="nextSearch">—</strong><em>automática</em></div></div></article>
+          <div class="safeData">🛡 <div><b>Seus dados estão seguros</b><small>Tokens privados permanecem protegidos no backend.</small></div></div>
+        </main>
+        <aside class="premiumRight">
+          <article class="panelCard botSideStatus"><div class="boxTitle"><h3>Status do Bot</h3><span id="sideBotBadge" class="tag">PAUSADO</span></div><div class="botOrb">🤖</div><h3 id="botHeadline">Pronto para configurar</h3><p class="muted" id="botStatusHelp">Conecte seus canais e escolha os filtros.</p><div class="sideStats"><small>Status</small><b id="botOnlineStatus">● Aguardando</b></div><button id="sideBotToggle" class="primary full">▶ Ativar Bot</button><button id="openBotConfig" class="secondary full">⚙ Configurações</button><input id="botAutoToggle" type="checkbox" hidden><span id="botToggleText" hidden>BOT DESATIVADO</span><span id="botActiveBadge" hidden>DESATIVADO</span></article>
+          <article class="panelCard helpCard"><h3>Precisa de ajuda?</h3><p class="muted">Veja os tutoriais e aprenda a configurar o bot.</p><button data-view-jump="tutorials" class="primary full">▶ Ver tutoriais</button></article>
+          <article class="panelCard quickV51"><h3>Ações rápidas</h3><div class="quickV51Btns"><button id="syncOffers" class="secondary protectedAction">⌕ Buscar ofertas agora</button><button id="quickProduct" class="secondary protectedAction">＋ Adicionar produto manual</button><button id="quickCampaign" class="secondary protectedAction">➤ Nova campanha</button><button data-view-jump="queue" class="secondary protectedAction">☷ Ver fila</button></div></article>
+        </aside>
+      </div>
+    </section>
 <section class="view" id="view-offers"><div class="sectionHead"><div><span class="sectionKicker">CATÁLOGO AUTOMÁTICO</span><h2>🔥 Ofertas</h2><p>Ofertas importadas das integrações ou cadastradas manualmente.</p></div><div class="headBtns"><button id="syncOffers2" class="secondary protectedAction">↻ Buscar ofertas</button><button id="newOffer" class="primary compact protectedAction">＋ Nova oferta</button></div></div><div class="filterBar"><input id="offerSearch" placeholder="Buscar produto, categoria ou plataforma..."><select id="offerPlatform"><option value="all">Todas plataformas</option><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select><select id="offerFilter"><option value="all">Todos</option><option value="queue">Na fila</option><option value="favorite">Favoritos</option></select></div><div id="offerGrid" class="offerGrid"></div></section>
 
     <section class="view" id="view-products"><div class="sectionHead"><div><h2>Produtos</h2><p>Todos os produtos ficam separados por usuário no Supabase.</p></div><button id="newProduct2" class="primary compact protectedAction">＋ Novo Produto</button></div><div class="panelCard"><div id="productList" class="tableList"></div></div></section>
