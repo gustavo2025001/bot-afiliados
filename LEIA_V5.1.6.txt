@@ -1,0 +1,13 @@
+BOT AFILIADOS V5.1.6
+
+Correção limpa feita a partir da V5.1.3:
+- Corrigido enforceGate sem __safeEl.
+- Elementos ausentes no HTML são ignorados com segurança.
+- Mantida a correção do status Mercado Livre.
+- JavaScript validado com `node --check` antes de gerar o ZIP.
+- index.html atualizado para app.js?v=5.1.6.
+
+IMPORTANTE:
+Abrir index.html diretamente pelo caminho file:/// pode mostrar avisos de segurança/401
+porque o bot foi feito para rodar publicado no GitHub Pages com sessão do Supabase.
+O teste definitivo deve ser no endereço do GitHub Pages.
