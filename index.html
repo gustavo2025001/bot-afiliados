@@ -51,9 +51,11 @@
       <button class="nav protected" data-view="campaigns">➤ <span>Campanhas</span></button>
       <button class="nav protected" data-view="schedules">◷ <span>Agendamentos</span></button>
       <button class="nav protected" data-view="integrations">⌁ <span>Integrações</span></button>
+<button class="nav protected" data-view="channels">⌘ <span>Canais & Grupos</span></button>
       <button class="nav protected" data-view="reports">⌗ <span>Histórico</span></button>
       <button class="nav" data-view="plans">♢ <span>Planos</span></button>
       <button class="nav adminOnly hidden" data-view="admin">⚙ <span>Área Admin</span></button>
+<button class="nav" data-view="tutorials">❔ <span>Tutoriais e Ajuda</span><span class="newBadge">NOVO</span></button>
     </nav>
     <div class="sidebarBottom"><div class="userbox"><b id="sideName">Usuário</b><small id="accountStatus">● Verificando</small></div><button id="logoutBtn" class="secondary">Sair</button></div>
   </aside>
@@ -67,28 +69,36 @@
     <div id="subscriptionGate" class="gateBanner hidden"><div><b>🔒 Funções bloqueadas</b><span>Escolha um plano ativo para liberar ofertas, campanhas, fila e automações.</span></div><button data-open-plans class="primary compact">Ver planos</button></div>
 
     <section class="view active" id="view-dashboard">
-      <section class="kpis">
-        <article><small>OFERTAS</small><strong id="offerCount">0</strong><em>Encontradas/importadas</em></article>
-        <article><small>NA FILA</small><strong id="queueCount">0</strong><em>Aguardando divulgação</em></article>
-        <article><small>POSTADAS HOJE</small><strong id="todayPostCount">0</strong><em>Dentro do limite</em></article>
-        <article><small>CAMPANHAS</small><strong id="campaignCount">0</strong><em>Configuradas</em></article>
-        <article><small>AGENDAMENTOS</small><strong id="scheduleCount">0</strong><em>Pendentes</em></article>
-      </section>
-      <div class="dashGrid">
-        <article class="panelCard heroPanel">
-          <div class="boxTitle"><div><span class="sectionKicker">AUTOMAÇÃO</span><h2>Ofertas → Fila → Compartilhamento</h2></div><span id="automationStatus" class="statusDot">Preparando</span></div>
-          <p class="muted">Importe ofertas das integrações autorizadas ou adicione manualmente. Depois gere o anúncio, coloque na fila e compartilhe.</p>
-          <div class="flow"><div><b>1</b><span>Buscar ofertas</span></div><i>→</i><div><b>2</b><span>Filtrar</span></div><i>→</i><div><b>3</b><span>Fila</span></div><i>→</i><div><b>4</b><span>Publicar</span></div></div>
-          <div class="quickRow"><button id="syncOffers" class="primary protectedAction">↻ Buscar ofertas</button><button id="quickProduct" class="secondary protectedAction">＋ Adicionar manual</button><button data-view-jump="queue" class="secondary protectedAction">☷ Abrir fila</button></div>
-        </article>
-        <article class="panelCard"><div class="boxTitle"><h3>Seu plano</h3><span id="planCardName" class="tag gold">SEM PLANO</span></div><div class="planUsage"><strong id="planCardStatus">Acesso limitado</strong><div class="progress"><i id="usageBar"></i></div><small id="planCardHelp">Escolha um plano para liberar as funções.</small><small id="planExpiry">Sem assinatura</small></div></article>
-        <article class="panelCard"><div class="boxTitle"><h3>Integrações</h3><span>STATUS</span></div><div class="integrationRows"><div>🛍 Shopee <b id="shopeeStatus">Pendente</b></div><div>🤝 Mercado Livre <b id="mlStatus">Pendente</b></div><div>🟢 WhatsApp <b id="waStatus">Pendente</b></div></div></article>
-        <article class="panelCard recentWide"><div class="boxTitle"><h3>Ofertas recentes</h3><button class="textBtn" data-view-jump="offers">Ver todas</button></div><div id="offerListMini" class="offerMini"></div></article>
-        <article class="panelCard"><div class="boxTitle"><h3>Próximos horários</h3></div><div id="scheduleListMini" class="list"></div></article>
-      </div>
-    </section>
-
-    <section class="view" id="view-offers"><div class="sectionHead"><div><span class="sectionKicker">CATÁLOGO AUTOMÁTICO</span><h2>🔥 Ofertas</h2><p>Ofertas importadas das integrações ou cadastradas manualmente.</p></div><div class="headBtns"><button id="syncOffers2" class="secondary protectedAction">↻ Buscar ofertas</button><button id="newOffer" class="primary compact protectedAction">＋ Nova oferta</button></div></div><div class="filterBar"><input id="offerSearch" placeholder="Buscar produto, categoria ou plataforma..."><select id="offerPlatform"><option value="all">Todas plataformas</option><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select><select id="offerFilter"><option value="all">Todos</option><option value="queue">Na fila</option><option value="favorite">Favoritos</option></select></div><div id="offerGrid" class="offerGrid"></div></section>
+<section class="kpis vividKpis">
+<article class="kpiPurple"><small>🏷 OFERTAS ENCONTRADAS</small><strong id="offerCount">0</strong><em>Catálogo atualizado</em></article>
+<article class="kpiBlue"><small>☷ NA FILA</small><strong id="queueCount">0</strong><em>Aguardando postagem</em></article>
+<article class="kpiGreen"><small>➤ POSTADAS HOJE</small><strong id="todayPostCount">0</strong><em>Ver histórico</em></article>
+<article class="kpiOrange"><small>👥 GRUPOS/CANAIS</small><strong id="channelCount">0</strong><em>Configurados</em></article>
+</section>
+<div class="v51Grid">
+<article class="panelCard botControl">
+<div class="boxTitle"><div><span class="sectionKicker">🤖 AUTOMAÇÃO 24H</span><h2>BOT AUTOMÁTICO <span id="botActiveBadge" class="tag">DESATIVADO</span></h2></div><button id="openBotConfig" class="secondary">⚙ Configurações</button></div>
+<p class="muted">Escolha como o bot deve procurar, filtrar e preparar ofertas. A publicação automática depende dos canais/APIs autorizados no backend.</p>
+<div class="botStatusStrip">
+<label class="switchLine"><input id="botAutoToggle" type="checkbox"><span class="switch"></span><b id="botToggleText">BOT DESATIVADO</b></label>
+<div><small>Próxima busca</small><b id="nextSearch">—</b></div><div><small>Intervalo</small><b id="botIntervalLabel">15 minutos</b></div><div><small>Publicações hoje</small><b id="botPostsToday">0</b></div><div><small>Status</small><b id="botOnlineStatus">● Aguardando</b></div>
+</div>
+<div class="howBot"><h3>ℹ COMO FUNCIONA O BOT AUTOMÁTICO?</h3><div class="botFlow">
+<div><b>1</b><span>🔎</span><strong>Busca ofertas</strong><small>Pesquisa nas lojas conectadas.</small></div><i>→</i>
+<div><b>2</b><span>🔻</span><strong>Filtra e analisa</strong><small>Desconto, preço e repetidos.</small></div><i>→</i>
+<div><b>3</b><span>📝</span><strong>Gera anúncio</strong><small>Prepara título, preço e link.</small></div><i>→</i>
+<div><b>4</b><span>☷</span><strong>Adiciona à fila</strong><small>Organiza a sequência.</small></div><i>→</i>
+<div><b>5</b><span>🔗</span><strong>Publica</strong><small>Usa canais autorizados.</small></div><i>→</i>
+<div><b>6</b><span>📊</span><strong>Registra e repete</strong><small>Evita duplicados e cria histórico.</small></div>
+</div><div class="botTip">💡 <b>Dica:</b> você pode pausar o bot a qualquer momento e ajustar os filtros nas configurações.</div></div>
+</article>
+<aside class="panelCard botSideStatus"><div class="boxTitle"><h3>Status do Bot</h3><span id="sideBotBadge" class="tag">PAUSADO</span></div><div class="botOrb">🤖</div><h3 id="botHeadline">Pronto para configurar</h3><p class="muted" id="botStatusHelp">Conecte seus canais e escolha os filtros.</p><button id="sideBotToggle" class="primary full">▶ Ativar Bot</button><button data-view-jump="reports" class="secondary full">☷ Ver histórico</button></aside>
+<article class="panelCard recentOffersV51"><div class="boxTitle"><h3>🔥 Ofertas encontradas recentemente</h3><button class="textBtn" data-view-jump="offers">Ver todas</button></div><div id="offerListMini" class="offerMini"></div></article>
+<aside class="panelCard activityV51"><div class="boxTitle"><h3>Atividade em tempo real</h3></div><div id="botActivity" class="activityList"><div class="empty">Aguardando atividade...</div></div><button data-view-jump="reports" class="secondary full">Ver todas as atividades</button></aside>
+<article class="panelCard quickV51"><div class="boxTitle"><h3>Ações rápidas</h3></div><div class="quickV51Btns"><button id="syncOffers" class="primary protectedAction">🔎 Buscar ofertas agora</button><button id="quickProduct" class="secondary protectedAction">＋ Adicionar produto manual</button><button id="quickCampaign" class="secondary protectedAction">➤ Nova campanha</button><button data-view-jump="queue" class="secondary protectedAction">☷ Ver fila de postagens</button></div></article>
+<article class="panelCard newUserHelp"><b>⭐ NOVO POR AQUI?</b><span>Confira o passo a passo e entenda cada função do bot.</span><button data-view-jump="tutorials" class="secondary">🎓 Ver tutoriais</button></article>
+</div></section>
+<section class="view" id="view-offers"><div class="sectionHead"><div><span class="sectionKicker">CATÁLOGO AUTOMÁTICO</span><h2>🔥 Ofertas</h2><p>Ofertas importadas das integrações ou cadastradas manualmente.</p></div><div class="headBtns"><button id="syncOffers2" class="secondary protectedAction">↻ Buscar ofertas</button><button id="newOffer" class="primary compact protectedAction">＋ Nova oferta</button></div></div><div class="filterBar"><input id="offerSearch" placeholder="Buscar produto, categoria ou plataforma..."><select id="offerPlatform"><option value="all">Todas plataformas</option><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select><select id="offerFilter"><option value="all">Todos</option><option value="queue">Na fila</option><option value="favorite">Favoritos</option></select></div><div id="offerGrid" class="offerGrid"></div></section>
 
     <section class="view" id="view-products"><div class="sectionHead"><div><h2>Produtos</h2><p>Todos os produtos ficam separados por usuário no Supabase.</p></div><button id="newProduct2" class="primary compact protectedAction">＋ Novo Produto</button></div><div class="panelCard"><div id="productList" class="tableList"></div></div></section>
 
@@ -99,7 +109,20 @@
 
     <section class="view" id="view-integrations"><div class="sectionHead"><div><h2>Integrações autorizadas</h2><p>Tokens privados ficam somente no Supabase Secrets/backend.</p></div></div><div class="integrationGrid"><article class="panelCard integrationCard"><span class="bigIcon">🛍</span><h3>Shopee</h3><p>Busca de ofertas e links depende da API oficial liberada para sua conta.</p><b id="shopeeStatus2">Pendente</b><button data-provider="shopee" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🤝</span><h3>Mercado Livre</h3><p>OAuth/API oficial para importar produtos e dados autorizados.</p><b id="mlStatus2">Pendente</b><button data-provider="mercadolivre" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🟢</span><h3>WhatsApp</h3><p>Compartilhamento assistido funciona; automação total requer Cloud API autorizada.</p><b id="waStatus2">Assistido</b><button data-provider="whatsapp" class="secondary connectProvider">Conectar API</button></article></div></section>
 
-    <section class="view" id="view-reports"><div class="sectionHead"><div><h2>Histórico</h2><p>Compartilhamentos e tentativas registradas.</p></div></div><div class="panelCard"><div id="postList" class="tableList"></div></div></section>
+    <section class="view" id="view-channels"><div class="sectionHead"><div><span class="sectionKicker">DESTINOS DE PUBLICAÇÃO</span><h2>📡 Canais & Grupos</h2><p>Organize onde as ofertas serão divulgadas. A postagem automática só funciona em canais com API autorizada.</p></div></div><div class="integrationGrid channelGrid">
+<article class="panelCard integrationCard"><span class="bigIcon">🟢</span><h3>WhatsApp</h3><p>Compartilhamento assistido já pode ser usado. Cloud API será necessária para automação total.</p><b>Assistido</b><button data-provider="whatsapp" class="secondary connectProvider">Configurar API</button></article>
+<article class="panelCard integrationCard"><span class="bigIcon">📸</span><h3>Instagram</h3><p>Espaço preparado para a integração oficial da Meta.</p><b>Pendente</b><button class="secondary channelSoon">Preparar integração</button></article>
+<article class="panelCard integrationCard"><span class="bigIcon">📘</span><h3>Facebook</h3><p>Páginas autorizadas poderão receber campanhas.</p><b>Pendente</b><button class="secondary channelSoon">Preparar integração</button></article>
+<article class="panelCard integrationCard"><span class="bigIcon">✈️</span><h3>Telegram</h3><p>Espaço preparado para canais e grupos.</p><b>Pendente</b><button class="secondary channelSoon">Preparar integração</button></article></div></section>
+<section class="view" id="view-tutorials"><div class="sectionHead"><div><span class="sectionKicker">COMECE AQUI</span><h2>🎓 Tutoriais e Ajuda</h2><p>Guia rápido para novos usuários.</p></div></div><div class="tutorialGrid">
+<article class="panelCard tutorialCard"><b>1</b><h3>Conecte as lojas</h3><p>Autorize as integrações disponíveis.</p><button data-view-jump="integrations" class="secondary">Abrir integrações</button></article>
+<article class="panelCard tutorialCard"><b>2</b><h3>Busque ofertas</h3><p>Importe produtos e confira preços/descontos.</p><button data-view-jump="offers" class="secondary">Ver ofertas</button></article>
+<article class="panelCard tutorialCard"><b>3</b><h3>Configure canais</h3><p>Defina os destinos de divulgação.</p><button data-view-jump="channels" class="secondary">Canais & Grupos</button></article>
+<article class="panelCard tutorialCard"><b>4</b><h3>Use a fila</h3><p>Confira a sequência antes de compartilhar.</p><button data-view-jump="queue" class="secondary">Abrir fila</button></article>
+<article class="panelCard tutorialCard"><b>5</b><h3>Bot Automático</h3><p>Defina filtros e intervalo. O trabalho 24h exige worker no backend.</p><button data-view-jump="dashboard" class="secondary">Ver automação</button></article>
+<article class="panelCard tutorialCard"><b>6</b><h3>Acompanhe tudo</h3><p>Veja publicações e erros no histórico.</p><button data-view-jump="reports" class="secondary">Abrir histórico</button></article>
+</div></section>
+<section class="view" id="view-reports"><div class="sectionHead"><div><h2>Histórico</h2><p>Compartilhamentos e tentativas registradas.</p></div></div><div class="panelCard"><div id="postList" class="tableList"></div></div></section>
 
     <section class="view" id="view-plans"><div class="sectionHead"><div><h2>Planos</h2><p>Limite de compartilhamento reinicia diariamente. A assinatura vale 30 dias.</p></div></div><div class="plansGrid"><article class="priceCard"><span>BÁSICO</span><strong>R$ 60<small>/30 dias</small></strong><ul><li><b>70</b> compartilhamentos por dia</li><li>Ofertas, fila e campanhas</li><li>Agendamentos</li></ul><button class="primary checkout" data-plan="basic" data-method="pix">PIX</button><button class="secondary checkout" data-plan="basic" data-method="card">Cartão</button></article><article class="priceCard featured"><span>PRO</span><strong>R$ 80<small>/30 dias</small></strong><ul><li><b>100</b> compartilhamentos por dia</li><li>Automação avançada</li><li>Mais volume diário</li></ul><button class="primary checkout" data-plan="pro" data-method="pix">PIX</button><button class="secondary checkout" data-plan="pro" data-method="card">Cartão</button></article><article class="priceCard"><span>PREMIUM</span><strong>R$ 120<small>/30 dias</small></strong><ul><li><b>Ilimitado</b> por dia</li><li>Todos os recursos</li><li>Maior liberdade de automação</li></ul><button class="primary checkout" data-plan="premium" data-method="pix">PIX</button><button class="secondary checkout" data-plan="premium" data-method="card">Cartão</button></article></div><div class="panelCard notice"><b>Pagamento</b><p>PIX/cartão estão preparados para gateway no backend. O plano só deve ser ativado depois do webhook confirmar o pagamento.</p></div></section>
 
@@ -107,6 +130,7 @@
   </main>
 </div>
 
+<div id="botConfigModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="botConfigModal">×</button><h2>⚙ Configurar Bot Automático</h2><p class="muted">Na V5.1 estas preferências ficam salvas no navegador. A execução 24h será conectada ao worker/backend.</p><div class="two"><label>Intervalo<select id="botInterval"><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60">1 hora</option><option value="120">2 horas</option></select></label><label>Desconto mínimo %<input id="botMinDiscount" type="number" value="20"></label></div><div class="two"><label>Preço mínimo<input id="botMinPrice" type="number" value="10"></label><label>Preço máximo<input id="botMaxPrice" type="number" value="1000"></label></div><label>Máximo de postagens por dia<input id="botDailyLimit" type="number" value="30"></label><div class="channelChecks"><label class="check"><input id="botUseML" type="checkbox" checked> Mercado Livre</label><label class="check"><input id="botUseShopee" type="checkbox"> Shopee</label><label class="check"><input id="botUseWhats" type="checkbox" checked> WhatsApp</label><label class="check"><input id="botUseInstagram" type="checkbox"> Instagram</label></div><button id="saveBotConfig" class="primary full">Salvar configurações</button></div></div>
 <div id="productModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="productModal">×</button><h2>Adicionar oferta/produto</h2><label>Você também pode colar o texto completo da oferta<textarea id="pPaste" rows="3" placeholder="Dê uma olhada em ... por R$... https://..."></textarea></label><button id="parseOffer" class="secondary full">Ler texto da oferta</button><label>Título<input id="pTitle"></label><div class="two"><label>Preço atual<input id="pPrice" placeholder="99,90"></label><label>Preço antigo<input id="pOldPrice" placeholder="149,90"></label></div><div class="two"><label>Desconto %<input id="pDiscount" type="number"></label><label>Plataforma<select id="pPlatform"><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select></label></div><label>Link de afiliado<input id="pLink" placeholder="https://..."></label><label>Imagem (URL)<input id="pImage" placeholder="https://..."></label><label>Categoria<input id="pCategory" placeholder="Geral"></label><button id="saveProduct" class="primary">Salvar no Supabase</button><p id="pMsg" class="msg"></p></div></div>
 
 <div id="campaignModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="campaignModal">×</button><h2>Nova Campanha</h2><label>Nome<input id="cName" placeholder="Ofertas da noite"></label><label>Produto<select id="cProduct"></select></label><label>Mensagem<textarea id="cMessage" rows="7" placeholder="🔥 Oferta imperdível..."></textarea></label><div class="channelChecks"><label class="check"><input type="checkbox" value="whatsapp" name="channel"> WhatsApp</label><label class="check"><input type="checkbox" value="shopee" name="channel"> Shopee</label><label class="check"><input type="checkbox" value="mercadolivre" name="channel"> Mercado Livre</label></div><button id="saveCampaign" class="primary">Salvar campanha</button><p id="cMsg" class="msg"></p></div></div>
