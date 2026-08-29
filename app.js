@@ -179,16 +179,51 @@ async function loadIntegrations(){
   const {data,error}=await sb.from('integrations').select('provider,status,updated_at');
   state.integrations=error?[]:(data||[]);
 
-  for(const provider of ['shopee','whatsapp']){
-    const rec=state.integrations.find(x=>x.provider===provider);
-    const text=provider==='whatsapp'&&!rec?'Assistido':rec?.status==='connected'?'Conectada':'Pendente';
-    const ids=provider==='shopee'?['shopeeStatus','shopeeStatus2']:['waStatus','waStatus2'];
-    ids.forEach(id=>{if($(id))$(id).textContent=text});
+  // SHOPEE: o estado permanente fica em shopee_integrations por usuario.
+  let shopeeConnected=false;
+  try{
+    const {data:shopeeRow,error:shopeeError}=await sb
+      .from('shopee_integrations')
+      .select('connected,status,updated_at')
+      .eq('user_id',state.user.id)
+      .maybeSingle();
+
+    if(shopeeError) console.warn('Falha ao consultar shopee_integrations:',shopeeError);
+    shopeeConnected=!!shopeeRow && (shopeeRow.connected===true || shopeeRow.status==='connected');
+
+    if(shopeeConnected){
+      localStorage.setItem('shopee_connected','1');
+      localStorage.setItem('shopee_connected_at',shopeeRow?.updated_at||new Date().toISOString());
+    }else{
+      localStorage.removeItem('shopee_connected');
+    }
+  }catch(e){
+    console.warn('Falha ao consultar status permanente da Shopee:',e);
+    shopeeConnected=localStorage.getItem('shopee_connected')==='1';
   }
 
+  ['shopeeStatus','shopeeStatus2'].forEach(id=>{
+    const el=$(id);
+    if(el){
+      el.textContent=shopeeConnected?'Conectada':'Pendente';
+      el.classList.toggle('connectedStatus',shopeeConnected);
+    }
+  });
+
+  document.querySelectorAll('.connectProvider[data-provider="shopee"]').forEach(btn=>{
+    btn.textContent=shopeeConnected?'Conectada ✓':'Conectar';
+    btn.disabled=shopeeConnected;
+  });
+
+  // WhatsApp continua no modo assistido.
+  const waRec=state.integrations.find(x=>x.provider==='whatsapp');
+  const waText=waRec?.status==='connected'?'Conectada':'Assistido';
+  ['waStatus','waStatus2'].forEach(id=>{
+    const el=$(id);
+    if(el)el.textContent=waText;
+  });
+
   // Mercado Livre: primeiro registra o retorno OAuth no navegador.
-  // Assim o painel não volta para "Pendente" só porque a Edge Function
-  // de status ainda não encontrou a tabela/token no backend.
   const params=new URLSearchParams(location.search);
   if(params.get('ml')==='connected'){
     localStorage.setItem('mercadolivre_connected','1');
@@ -201,8 +236,6 @@ async function loadIntegrations(){
 
   let mlConnected=localStorage.getItem('mercadolivre_connected')==='1';
   try{
-    // Consulta direta ao endpoint que já foi validado manualmente.
-    // Cache-buster evita resposta antiga do navegador/GitHub Pages.
     const statusUrl=`${SUPABASE_URL}/functions/v1/mercadolivre-status?t=${Date.now()}`;
     const r=await fetch(statusUrl,{
       method:'GET',
@@ -232,7 +265,7 @@ async function loadIntegrations(){
     }
   });
 }
-document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sessão expirada. Faça login novamente.');const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));if(provider==='shopee'&&r.ok&&data.success===true&&data.connected===true){localStorage.setItem('shopee_connected','1');localStorage.setItem('shopee_connected_at',new Date().toISOString());['shopeeStatus','shopeeStatus2'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='Conectada';el.classList.add('connectedStatus')}});btn.textContent='Conectada ✓';btn.disabled=true;toast('Shopee conectada com sucesso!','success');return;}const url=data.authorization_url||data.url;if(r.ok&&url){location.href=url;return;}toast(data.error||'Integração ainda não configurada no backend.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
+document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sessão expirada. Faça login novamente.');const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));if(provider==='shopee'&&r.ok&&data.success===true&&data.connected===true){localStorage.setItem('shopee_connected','1');localStorage.setItem('shopee_connected_at',new Date().toISOString());await loadIntegrations();toast('Shopee conectada com sucesso!','success');return;}const url=data.authorization_url||data.url;if(r.ok&&url){location.href=url;return;}toast(data.error||'Integração ainda não configurada no backend.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
 document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{
   const old=btn.textContent;
   btn.disabled=true;
