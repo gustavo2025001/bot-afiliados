@@ -140,6 +140,19 @@
   </main>
 </div>
 
+
+<div id="shopeeConnectModal" class="modal hidden">
+  <div class="modalCard">
+    <button class="x closeModal" data-modal="shopeeConnectModal">×</button>
+    <h2>🛍 Conectar Shopee</h2>
+    <p class="muted">Use as credenciais da sua própria conta de Afiliado Shopee. Elas serão validadas no backend e vinculadas somente ao seu usuário.</p>
+    <label>App ID<input id="shopeeAppId" autocomplete="off" placeholder="Digite seu App ID"></label>
+    <label>Secret<input id="shopeeSecret" type="password" autocomplete="new-password" placeholder="Digite seu Secret"></label>
+    <button id="saveShopeeConnect" class="primary full">Conectar e validar</button>
+    <p id="shopeeConnectMsg" class="msg"></p>
+  </div>
+</div>
+
 <div id="botConfigModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="botConfigModal">×</button><h2>⚙ Configurar Bot Automático</h2><p class="muted">Na V5.1 estas preferências ficam salvas no navegador. A execução 24h será conectada ao worker/backend.</p><div class="two"><label>Intervalo<select id="botInterval"><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60">1 hora</option><option value="120">2 horas</option></select></label><label>Desconto mínimo %<input id="botMinDiscount" type="number" value="20"></label></div><div class="two"><label>Preço mínimo<input id="botMinPrice" type="number" value="10"></label><label>Preço máximo<input id="botMaxPrice" type="number" value="1000"></label></div><label>Máximo de postagens por dia<input id="botDailyLimit" type="number" value="30"></label><div class="channelChecks"><label class="check"><input id="botUseML" type="checkbox" checked> Mercado Livre</label><label class="check"><input id="botUseShopee" type="checkbox"> Shopee</label><label class="check"><input id="botUseWhats" type="checkbox" checked> WhatsApp</label><label class="check"><input id="botUseInstagram" type="checkbox"> Instagram</label></div><button id="saveBotConfig" class="primary full">Salvar configurações</button></div></div>
 <div id="productModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="productModal">×</button><h2>Adicionar oferta/produto</h2><label>Você também pode colar o texto completo da oferta<textarea id="pPaste" rows="3" placeholder="Dê uma olhada em ... por R$... https://..."></textarea></label><button id="parseOffer" class="secondary full">Ler texto da oferta</button><label>Título<input id="pTitle"></label><div class="two"><label>Preço atual<input id="pPrice" placeholder="99,90"></label><label>Preço antigo<input id="pOldPrice" placeholder="149,90"></label></div><div class="two"><label>Desconto %<input id="pDiscount" type="number"></label><label>Plataforma<select id="pPlatform"><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select></label></div><label>Link de afiliado<input id="pLink" placeholder="https://..."></label><label>Imagem (URL)<input id="pImage" placeholder="https://..."></label><label>Categoria<input id="pCategory" placeholder="Geral"></label><button id="saveProduct" class="primary">Salvar no Supabase</button><p id="pMsg" class="msg"></p></div></div>
 
@@ -147,6 +160,6 @@
 <div id="scheduleModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="scheduleModal">×</button><h2>Novo Agendamento</h2><label>Campanha<select id="sCampaign"></select></label><label>Data e hora<input id="sWhen" type="datetime-local"></label><button id="saveSchedule" class="primary">Agendar</button><p id="sMsg" class="msg"></p></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=5.1.7"></script>
+<script src="app.js?v=5.1.8"></script>
 </body>
 </html>

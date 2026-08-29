@@ -214,6 +214,8 @@ async function loadIntegrations(){
     btn.textContent=shopeeConnected?'Conectada ✓':'Conectar';
     btn.disabled=shopeeConnected;
   });
+  const dashShopee=$('dashShopeeStatus');
+  if(dashShopee)dashShopee.textContent=shopeeConnected?'Conectada':'Pendente';
 
   // WhatsApp continua no modo assistido.
   const waRec=state.integrations.find(x=>x.provider==='whatsapp');
@@ -264,8 +266,92 @@ async function loadIntegrations(){
       $(id).classList.toggle('connectedStatus',mlConnected);
     }
   });
+  const dashMl=$('dashMlStatus');
+  if(dashMl)dashMl.textContent=mlConnected?'Conectado':'Pendente';
 }
-document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{if(!requireAccess())return;const provider=btn.dataset.provider;try{const{data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sessão expirada. Faça login novamente.');const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});const data=await r.json().catch(()=>({}));if(provider==='shopee'&&r.ok&&data.success===true&&data.connected===true){localStorage.setItem('shopee_connected','1');localStorage.setItem('shopee_connected_at',new Date().toISOString());await loadIntegrations();toast('Shopee conectada com sucesso!','success');return;}const url=data.authorization_url||data.url;if(r.ok&&url){location.href=url;return;}toast(data.error||'Integração ainda não configurada no backend.','error')}catch(e){toast('Não foi possível iniciar a integração: '+e.message,'error')}});
+document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{
+  if(!requireAccess())return;
+  const provider=btn.dataset.provider;
+
+  if(provider==='shopee'){
+    $('shopeeAppId').value='';
+    $('shopeeSecret').value='';
+    $('shopeeConnectMsg').textContent='';
+    modal('shopeeConnectModal');
+    return;
+  }
+
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session)throw new Error('Sessão expirada. Faça login novamente.');
+    const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{
+      method:'GET',
+      headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}
+    });
+    const data=await r.json().catch(()=>({}));
+    const url=data.authorization_url||data.url;
+    if(r.ok&&url){location.href=url;return;}
+    toast(data.error||'Integração ainda não configurada no backend.','error');
+  }catch(e){
+    toast('Não foi possível iniciar a integração: '+e.message,'error');
+  }
+});
+
+if($('saveShopeeConnect'))$('saveShopeeConnect').onclick=async()=>{
+  if(!requireAccess())return;
+  const appId=$('shopeeAppId').value.trim();
+  const secret=$('shopeeSecret').value.trim();
+  const msg=$('shopeeConnectMsg');
+  const btn=$('saveShopeeConnect');
+
+  if(!appId||!secret){
+    msg.textContent='Informe o App ID e o Secret da sua conta Shopee.';
+    return;
+  }
+
+  const old=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='Validando...';
+  msg.textContent='Validando credenciais com a Shopee...';
+
+  try{
+    const{data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/shopee-connect`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${session.access_token}`,
+        'apikey':SUPABASE_ANON_KEY
+      },
+      body:JSON.stringify({app_id:appId,secret})
+    });
+
+    const data=await r.json().catch(()=>({}));
+    console.log('shopee-connect:',r.status,data);
+
+    if(!r.ok||data.success!==true||data.connected!==true){
+      throw new Error(data.error||`Erro HTTP ${r.status}`);
+    }
+
+    localStorage.setItem('shopee_connected','1');
+    localStorage.setItem('shopee_connected_at',new Date().toISOString());
+    $('shopeeSecret').value='';
+    closeModal('shopeeConnectModal');
+    await loadIntegrations();
+    toast('Shopee conectada com sucesso!','ok');
+  }catch(e){
+    console.error('Shopee connect:',e);
+    msg.textContent='Não foi possível conectar: '+(e?.message||String(e));
+  }finally{
+    btn.disabled=false;
+    btn.textContent=old;
+  }
+};
+
 document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{
   const old=btn.textContent;
   btn.disabled=true;
