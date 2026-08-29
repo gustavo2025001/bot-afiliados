@@ -421,7 +421,25 @@ const BOT_CONFIG_KEY='botAfiliadosV51Config',BOT_ACTIVE_KEY='botAfiliadosV51Acti
 function getBotConfig(){try{return JSON.parse(localStorage.getItem(BOT_CONFIG_KEY))||{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}catch(e){return{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}}
 function botIsActive(){return localStorage.getItem(BOT_ACTIVE_KEY)==='1'}
 function renderBotActivity(){if(!$('botActivity'))return;const rows=(state.posts||[]).slice(0,5);$('botActivity').innerHTML=rows.map(p=>`<div class="activityItem"><b>${esc(p.status==='success'?'Publicado':'Registro')}: ${esc(p.provider||'canal')}</b><span>${p.created_at?new Date(p.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="empty">Nenhuma publicação registrada ainda.</div>'}
-function renderBotV51(){if(!$('botAutoToggle'))return;const c=getBotConfig(),active=botIsActive();$('botAutoToggle').checked=active;$('botToggleText').textContent=active?'BOT ATIVO':'BOT DESATIVADO';$('botActiveBadge').textContent=active?'ATIVO':'DESATIVADO';$('sideBotBadge').textContent=active?'ATIVO':'PAUSADO';$('sideBotToggle').textContent=active?'Ⅱ Pausar Bot':'▶ Ativar Bot';$('botIntervalLabel').textContent=c.interval>=60?(c.interval/60)+' hora'+(c.interval>60?'s':''):c.interval+' minutos';$('botPostsToday').textContent=state.share?.used||0;$('botOnlineStatus').textContent=active?'● Configurado':'● Aguardando';$('botHeadline').textContent=active?'Automação configurada 🚀':'Pronto para configurar';$('botStatusHelp').textContent=active?'Preferências salvas. O worker 24h do backend ainda precisa ser ligado.':'Conecte seus canais e escolha os filtros.';$('nextSearch').textContent=active?c.interval+' min':'—';if($('channelCount'))$('channelCount').textContent=(c.useWhats?1:0)+(c.useInstagram?1:0);renderBotActivity()}
+function renderBotV51(){
+  if(!$('botAutoToggle'))return;
+  const c=getBotConfig(),active=botIsActive();
+  const setText=(id,text)=>{const el=$(id);if(el)el.textContent=text;};
+  $('botAutoToggle').checked=active;
+  setText('botToggleText',active?'BOT ATIVO':'BOT DESATIVADO');
+  setText('botActiveBadge',active?'ATIVO':'DESATIVADO');
+  setText('sideBotBadge',active?'ATIVO':'PAUSADO');
+  setText('sideBotToggle',active?'Ⅱ Pausar Bot':'▶ Ativar Bot');
+  setText('botIntervalLabel',c.interval>=60?(c.interval/60)+' hora'+(c.interval>60?'s':''):c.interval+' minutos');
+  setText('botPostsToday',state.share?.used||0);
+  setText('botOnlineStatus',active?'● Configurado':'● Aguardando');
+  setText('botHeadline',active?'Automação configurada 🚀':'Pronto para configurar');
+  setText('botStatusHelp',active?'Preferências salvas. O worker 24h do backend ainda precisa ser ligado.':'Conecte seus canais e escolha os filtros.');
+  setText('nextSearch',active?c.interval+' min':'—');
+  setText('channelCount',(c.useWhats?1:0)+(c.useInstagram?1:0));
+  renderBotActivity();
+}
+
 async function setBotActive(v){
   if(!requireAccess())return;
   const toggle=$('botAutoToggle');
