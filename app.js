@@ -12,7 +12,7 @@ const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
 const toast=(text,type='')=>{const el=$('toast');el.textContent=text;el.className='toast '+type;clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),4200)};
 const modal=id=>$(id)?.classList.remove('hidden');
 const closeModal=id=>$(id)?.classList.add('hidden');
-const ADMIN_EMAIL='gustavobarbosagustavodepaulaba@gmail.com';
+const ADMIN_EMAIL='gustavodepaulabarbosag@gmail.com';
 const ADMIN_USER_ID='b1fa7a00-02fe-4c7c-b2a5-3873eee3f5d1';
 
 const isAdmin=()=>{
@@ -272,97 +272,41 @@ document.querySelectorAll('.checkout').forEach(btn=>btn.onclick=async()=>{
   btn.textContent='Preparando...';
   try{
     const plan=btn.dataset.plan;
-    const method=btn.dataset.method;
-    // PIX usa a Edge Function pix-create já validada no Supabase.
-    if(method==='pix'){
-      const {data:{session}}=await sb.auth.getSession();
+    const {data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
 
-      if(!session?.access_token){
-        throw new Error('Sessão expirada. Faça login novamente.');
-      }
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/infinitepay-create`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${session.access_token}`,
+        'apikey':SUPABASE_ANON_KEY
+      },
+      body:JSON.stringify({plan,return_url:location.href})
+    });
 
-      const r=await fetch(`${SUPABASE_URL}/functions/v1/pix-create`,{
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'Authorization':`Bearer ${session.access_token}`,
-          'apikey':SUPABASE_ANON_KEY
-        },
-        body:JSON.stringify({plan})
-      });
-      const data=await r.json().catch(()=>({}));
-      if(!r.ok||data.success!==true)throw new Error(data.error||`Erro HTTP ${r.status}`);
+    const data=await r.json().catch(()=>({}));
+    console.log('infinitepay-create:',r.status,data);
+    if(!r.ok||data.success!==true)throw new Error(data.error||`Erro HTTP ${r.status}`);
 
-      const payment=data.payment||{};
-      const pix=payment.pix_copy_paste||payment.copy_paste||payment.qr_code||'';
-      if(!pix)throw new Error('PIX gerado, mas o código copia e cola não foi retornado.');
+    const checkoutUrl=data.checkout_url||data.url||data.payment?.checkout_url||data.payment?.url;
+    if(!checkoutUrl)throw new Error('A InfinitePay não retornou o link do checkout.');
 
-      const amount=payment.amount!=null?money(payment.amount):'';
-
-      let overlay=document.getElementById('pixPaymentOverlay');
-      if(!overlay){
-        overlay=document.createElement('div');
-        overlay.id='pixPaymentOverlay';
-        overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px;';
-        overlay.innerHTML=`
-          <div style="width:min(430px,100%);max-height:92vh;overflow:auto;background:#111522;border:1px solid #343b55;border-radius:18px;padding:24px;color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.55);font-family:inherit">
-            <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:8px">
-              <h2 style="margin:0;font-size:22px">Pagamento PIX</h2>
-              <button id="pixCloseBtn" type="button" style="border:0;background:#242b40;color:#fff;border-radius:9px;padding:8px 12px;cursor:pointer">✕</button>
-            </div>
-            <div id="pixPlanInfo" style="color:#b9c1d9;margin-bottom:18px"></div>
-            <div style="background:#fff;border-radius:14px;padding:14px;width:max-content;max-width:100%;margin:0 auto 18px">
-              <img id="pixQrImage" alt="QR Code PIX" style="display:block;width:260px;height:260px;max-width:68vw;max-height:68vw">
-            </div>
-            <div style="font-size:13px;color:#b9c1d9;margin-bottom:7px">PIX Copia e Cola</div>
-            <textarea id="pixCopyCode" readonly style="box-sizing:border-box;width:100%;height:92px;resize:none;border:1px solid #343b55;border-radius:10px;background:#090c14;color:#fff;padding:11px;font:12px monospace"></textarea>
-            <button id="pixCopyBtn" type="button" style="width:100%;margin-top:12px;border:0;border-radius:10px;padding:13px;background:linear-gradient(90deg,#a21cff,#6545ff);color:#fff;font-weight:800;cursor:pointer">Copiar código PIX</button>
-            <div style="font-size:12px;color:#929bb7;text-align:center;margin-top:12px">Escaneie o QR Code no app do banco ou use o Copia e Cola.</div>
-          </div>`;
-        document.body.appendChild(overlay);
-        overlay.querySelector('#pixCloseBtn').onclick=()=>overlay.remove();
-        overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});
-      }
-
-      overlay.querySelector('#pixPlanInfo').textContent=`${payment.plan_name||plan}${amount?' • '+amount:''}`;
-      overlay.querySelector('#pixCopyCode').value=pix;
-      overlay.querySelector('#pixQrImage').src='https://api.qrserver.com/v1/create-qr-code/?size=320x320&data='+encodeURIComponent(pix);
-
-      overlay.querySelector('#pixCopyBtn').onclick=async()=>{
-        try{
-          await navigator.clipboard.writeText(pix);
-          toast('Código PIX copiado.','ok');
-        }catch(_e){
-          const ta=overlay.querySelector('#pixCopyCode');
-          ta.focus(); ta.select();
-          document.execCommand('copy');
-          toast('Código PIX copiado.','ok');
-        }
-      };
-
-      toast('PIX gerado com sucesso.','ok');
-      return;
+    if(data.payment?.order_nsu){
+      localStorage.setItem('infinitepay_last_order_nsu',String(data.payment.order_nsu));
     }
 
-    // Cartão continua no checkout antigo até o gateway de cartão ser conectado.
-    const{data:{session}}=await sb.auth.getSession();
-    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},
-      body:JSON.stringify({plan,method,return_url:location.href})
-    });
-    const data=await r.json().catch(()=>({}));
-    if(r.ok&&data.checkout_url)location.href=data.checkout_url;
-    else throw new Error(data.error||'Gateway de cartão ainda não configurado.');
+    toast('Abrindo checkout seguro da InfinitePay...','ok');
+    window.location.href=checkoutUrl;
   }catch(e){
+    console.error('InfinitePay checkout:',e);
     toast('Checkout indisponível: '+(e?.message||String(e)),'error');
   }finally{
     btn.disabled=false;
     btn.textContent=old;
   }
 });
-
 async function loadAdmin(){
   if(!isAdmin())return;
 
