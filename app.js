@@ -179,27 +179,23 @@ async function loadIntegrations(){
   const {data,error}=await sb.from('integrations').select('provider,status,updated_at');
   state.integrations=error?[]:(data||[]);
 
-  // SHOPEE: o estado permanente fica em shopee_integrations por usuario.
+  // IMPORTANTE: nenhuma integracao e herdada do navegador ou de outro usuario.
+  // Cada status precisa vir do backend/banco vinculado ao user_id da sessao atual.
+
+  // SHOPEE: somente fica conectada quando ESTE usuario tiver credenciais validadas.
   let shopeeConnected=false;
   try{
     const {data:shopeeRow,error:shopeeError}=await sb
       .from('shopee_integrations')
-      .select('connected,status,updated_at')
+      .select('connected,status,app_id,updated_at')
       .eq('user_id',state.user.id)
       .maybeSingle();
 
     if(shopeeError) console.warn('Falha ao consultar shopee_integrations:',shopeeError);
-    shopeeConnected=!!shopeeRow && (shopeeRow.connected===true || shopeeRow.status==='connected');
-
-    if(shopeeConnected){
-      localStorage.setItem('shopee_connected','1');
-      localStorage.setItem('shopee_connected_at',shopeeRow?.updated_at||new Date().toISOString());
-    }else{
-      localStorage.removeItem('shopee_connected');
-    }
+    shopeeConnected=!!shopeeRow && !!shopeeRow.app_id && shopeeRow.connected===true && shopeeRow.status==='connected';
   }catch(e){
-    console.warn('Falha ao consultar status permanente da Shopee:',e);
-    shopeeConnected=localStorage.getItem('shopee_connected')==='1';
+    console.warn('Falha ao consultar status da Shopee:',e);
+    shopeeConnected=false;
   }
 
   ['shopeeStatus','shopeeStatus2'].forEach(id=>{
@@ -225,39 +221,39 @@ async function loadIntegrations(){
     if(el)el.textContent=waText;
   });
 
-  // Mercado Livre: primeiro registra o retorno OAuth no navegador.
+  // MERCADO LIVRE: o retorno OAuth apenas avisa que devemos consultar o backend.
+  // Nao marcamos conectado por query string nem localStorage.
   const params=new URLSearchParams(location.search);
-  if(params.get('ml')==='connected'){
-    localStorage.setItem('mercadolivre_connected','1');
-    localStorage.setItem('mercadolivre_connected_at',new Date().toISOString());
-    toast('Mercado Livre conectado com sucesso!','ok');
+  const returnedFromMl=params.get('ml')==='connected';
+  if(returnedFromMl){
     params.delete('ml');
     const qs=params.toString();
     history.replaceState({},'',location.pathname+(qs?'?'+qs:'')+location.hash);
   }
 
-  let mlConnected=localStorage.getItem('mercadolivre_connected')==='1';
+  let mlConnected=false;
   try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token) throw new Error('Sessao ausente');
+
     const statusUrl=`${SUPABASE_URL}/functions/v1/mercadolivre-status?t=${Date.now()}`;
     const r=await fetch(statusUrl,{
       method:'GET',
       cache:'no-store',
-      headers:{'Accept':'application/json'}
+      headers:{
+        'Accept':'application/json',
+        'Authorization':`Bearer ${session.access_token}`,
+        'apikey':SUPABASE_ANON_KEY
+      }
     });
     const d=await r.json().catch(()=>({}));
+    console.log('Mercado Livre status do usuario atual:',r.status,d);
 
-    console.log('Mercado Livre status:',r.status,d);
-
-    if(r.ok && (d.connected===true || d.status==='connected')){
-      mlConnected=true;
-      localStorage.setItem('mercadolivre_connected','1');
-      localStorage.setItem('mercadolivre_connected_at',new Date().toISOString());
-    }else if(r.ok && d.connected===false){
-      mlConnected=false;
-      localStorage.removeItem('mercadolivre_connected');
-    }
+    mlConnected=r.ok && (d.connected===true || d.status==='connected');
+    if(returnedFromMl && mlConnected) toast('Mercado Livre conectado com sucesso!','ok');
   }catch(e){
-    console.warn('Falha ao consultar mercadolivre-status; mantendo último estado confirmado.',e);
+    console.warn('Falha ao consultar mercadolivre-status:',e);
+    mlConnected=false;
   }
 
   ['mlStatus','mlStatus2'].forEach(id=>{
@@ -337,8 +333,6 @@ if($('saveShopeeConnect'))$('saveShopeeConnect').onclick=async()=>{
       throw new Error(data.error||`Erro HTTP ${r.status}`);
     }
 
-    localStorage.setItem('shopee_connected','1');
-    localStorage.setItem('shopee_connected_at',new Date().toISOString());
     $('shopeeSecret').value='';
     closeModal('shopeeConnectModal');
     await loadIntegrations();

@@ -1,0 +1,10 @@
+AJUSTE V5.1.9 - INTEGRACOES POR USUARIO
+
+- Pagamento libera somente o painel.
+- Shopee NAO conecta automaticamente.
+- Shopee so mostra Conectada quando shopee_integrations do user_id atual tiver app_id + connected=true + status=connected.
+- Mercado Livre NAO usa mais localStorage/query string como prova de conexao.
+- mercadolivre-status agora recebe o JWT do usuario logado.
+
+IMPORTANTE NO BACKEND:
+A Edge Function mercadolivre-status precisa validar o JWT recebido e consultar mercadolivre_tokens filtrando pelo user_id autenticado. Se ela ainda usa token global, envie o codigo dela para fazermos o ajuste.
