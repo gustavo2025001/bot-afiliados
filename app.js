@@ -65,6 +65,9 @@ async function boot(user){
     loadShareStatus()
   ]);
 
+  // Inicia a escuta em tempo real somente depois da carga inicial.
+  startProductsRealtime();
+
   if(isAdmin()) await loadAdmin();
   renderAll();
 }
@@ -123,6 +126,44 @@ $('newProduct').onclick=$('newProduct2').onclick=$('quickProduct').onclick=$('ne
 function clearProductForm(){['pPaste','pTitle','pPrice','pOldPrice','pDiscount','pLink','pImage','pCategory'].forEach(id=>{if($(id))$(id).value=''});$('pCategory').value='Geral';$('pMsg').textContent=''}
 
 async function loadProducts(){const{data,error}=await sb.from('products').select('*').order('created_at',{ascending:false});if(error){renderDbError('productList','Produtos',error);return}state.products=data||[];renderProducts();renderOffers();renderQueue()}
+
+// Realtime: atualiza Produtos/Ofertas/Fila automaticamente quando a tabela products mudar.
+let productsRealtimeChannel = null;
+let productsRealtimeTimer = null;
+
+function startProductsRealtime(){
+  if(!state.user?.id)return;
+
+  // Evita listeners duplicados caso o boot seja executado novamente.
+  if(productsRealtimeChannel){
+    sb.removeChannel(productsRealtimeChannel);
+    productsRealtimeChannel=null;
+  }
+
+  productsRealtimeChannel=sb
+    .channel(`products-realtime-${state.user.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event:'*',
+        schema:'public',
+        table:'products',
+        filter:`user_id=eq.${state.user.id}`
+      },
+      ()=>{
+        // O sync pode alterar varias ofertas juntas; agrupamos os eventos em uma recarga.
+        clearTimeout(productsRealtimeTimer);
+        productsRealtimeTimer=setTimeout(async()=>{
+          console.log('Produtos atualizados automaticamente pelo Realtime.');
+          await loadProducts();
+        },500);
+      }
+    )
+    .subscribe(status=>{
+      console.log('Products Realtime:',status);
+    });
+}
+
 function renderAll(){renderProducts();renderOffers();renderQueue();renderCampaigns();renderSchedules();renderPosts();renderUsage();renderBotV51()}
 function renderProducts(){if(!$('productList'))return;$('offerCount').textContent=state.products.length;$('queueCount').textContent=state.products.filter(x=>x.queued).length;$('productList').innerHTML=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><div class="rowActions"><button class="iconBtn" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Fila':'+ Fila'}</button><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';const mini=state.products.slice(0,5);$('offerListMini').innerHTML=mini.map(p=>`<div class="miniOffer"><div class="miniThumb">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍'}</div><div><b>${esc(p.title)}</b><small>${money(p.price)} • ${esc(p.platform)}</small></div><span class="tag">${p.discount_percent?'-'+p.discount_percent+'%':'OFERTA'}</span></div>`).join('')||'<div class="empty">Nenhuma oferta ainda.</div>'}
 function filteredOffers(){const q=($('offerSearch')?.value||'').toLowerCase(),plat=$('offerPlatform')?.value||'all',f=$('offerFilter')?.value||'all';return state.products.filter(p=>(!q||[p.title,p.category,p.platform].join(' ').toLowerCase().includes(q))&&(plat==='all'||p.platform===plat)&&(f==='all'||f==='queue'&&p.queued||f==='favorite'&&p.favorite))}
@@ -549,7 +590,7 @@ if($('quickCampaign'))$('quickCampaign').onclick=()=>{if(!requireAccess())return
 document.querySelectorAll('.channelSoon').forEach(btn=>btn.onclick=()=>toast('Canal preparado no painel. A integração oficial será ligada no backend.','ok'));
 
 function renderDbError(id,label,error){const el=$(id);if(el)el.innerHTML=`<div class="empty">${esc(label)} indisponível: ${esc(error.message)}<br>Execute o SQL atualizado.</div>`}
-sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT')state.user=null;if(event==='SIGNED_IN'&&session?.user&&!state.user)boot(session.user)});(async()=>{const{data}=await sb.auth.getSession();if(data.session?.user)boot(data.session.user)})();
+sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){state.user=null;if(productsRealtimeChannel){sb.removeChannel(productsRealtimeChannel);productsRealtimeChannel=null;}clearTimeout(productsRealtimeTimer);}if(event==='SIGNED_IN'&&session?.user&&!state.user)boot(session.user)});(async()=>{const{data}=await sb.auth.getSession();if(data.session?.user)boot(data.session.user)})();
 
 // Premium Dashboard bridge: visual shortcuts reuse existing bot controls.
 document.getElementById('setupOpenConfig')?.addEventListener('click',()=>document.getElementById('openBotConfig')?.click());
