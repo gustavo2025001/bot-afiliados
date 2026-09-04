@@ -49,12 +49,16 @@ Os botões chamam `create-checkout`. Ainda é necessário escolher/configurar um
 
 ### Postagem 100% automática
 
-O compartilhamento assistido do WhatsApp já funciona pelo navegador e respeita o contador diário. Para envio sem intervenção, inclusive com o navegador fechado, é necessário:
+A V5.2 adiciona a conexão real com a WhatsApp Cloud API pelo Supabase. O token de cada usuário é enviado somente à Edge Function e armazenado criptografado; o navegador continua sem acesso direto ao segredo. O compartilhamento assistido antigo foi mantido como fallback. Para ativar a V5.2, siga `ATUALIZACAO_WHATSAPP_V5.2.txt`.
+
+Para automação avançada, inclusive execução agendada com o navegador fechado, ainda é necessário:
 
 1. WhatsApp Business Platform/Cloud API autorizada e consentimento dos destinatários;
-2. tokens protegidos no backend;
-3. adaptadores oficiais no `run-scheduled-posts`;
+2. templates aprovados quando exigidos pela política/janela de mensagens;
+3. worker/Edge Function para os agendamentos;
 4. Supabase Cron/scheduler para executar a função.
+
+A V5.2 já conecta a Cloud API, testa o envio e permite que a fila envie automaticamente ao destinatário padrão configurado.
 
 Shopee e Mercado Livre também só podem usar os endpoints e permissões oficialmente disponibilizados para a conta. O projeto não usa scraping nem coloca senha/token secreto no GitHub.
 

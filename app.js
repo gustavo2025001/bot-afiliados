@@ -5,7 +5,7 @@ const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
-const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},previewId:null};
+const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false,verified_name:null,phone_mask:null,has_default_recipient:false},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},previewId:null};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
@@ -180,7 +180,46 @@ function renderQueue(){if(!$('queueList'))return;const q=state.products.filter(x
 function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;$('previewCopy').disabled=false}
 $('previewCopy').onclick=async()=>{const p=state.products.find(x=>x.id===state.previewId);if(!p)return;await navigator.clipboard.writeText(adMessage(p));toast('Mensagem copiada.','ok')};
 $('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);$('shareNext').onclick=()=>{const p=state.products.find(x=>x.queued);if(!p)return toast('A fila está vazia.','error');shareWhatsApp(p.id)};
-window.shareWhatsApp=async id=>{if(!requireAccess())return;const p=state.products.find(x=>x.id===id);if(!p)return;const popup=window.open('about:blank','_blank');const{data,error}=await sb.rpc('record_assisted_share',{target_product:id,target_provider:'whatsapp'});if(error){popup?.close();toast(error.message.includes('Limite')?'Você atingiu o limite de hoje. Amanhã o contador reinicia.':error.message,'error');await loadShareStatus();return}if(popup)popup.location.href='https://wa.me/?text='+encodeURIComponent(adMessage(p));else window.location.href='https://wa.me/?text='+encodeURIComponent(adMessage(p));p.queued=false;await Promise.all([loadShareStatus(),loadPosts()]);renderProducts();renderOffers();renderQueue();toast('Compartilhamento registrado no uso diário.','ok')};
+window.shareWhatsApp=async id=>{
+  if(!requireAccess())return;
+  const p=state.products.find(x=>x.id===id);
+  if(!p)return;
+
+  // Se a Cloud API estiver conectada, envia de verdade pelo backend, sem abrir o WhatsApp.
+  if(state.whatsapp.connected){
+    try{
+      const{data:{session}}=await sb.auth.getSession();
+      if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+      toast('Enviando pela WhatsApp Cloud API...');
+      const r=await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send-product`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},
+        body:JSON.stringify({product_id:id,message:adMessage(p)})
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||d.success!==true)throw new Error(d.error||`Erro HTTP ${r.status}`);
+      p.queued=false;
+      await Promise.all([loadShareStatus(),loadPosts(),loadProducts()]);
+      renderProducts();renderOffers();renderQueue();
+      toast(`Mensagem enviada pela API para ${d.to_mask||'o destinatário configurado'}.`,'ok');
+      return;
+    }catch(e){
+      await Promise.all([loadShareStatus(),loadPosts()]);
+      toast('Falha no envio pela API: '+e.message,'error');
+      return;
+    }
+  }
+
+  // Fallback seguro: mantém exatamente o compartilhamento assistido que já existia.
+  const popup=window.open('about:blank','_blank');
+  const{error}=await sb.rpc('record_assisted_share',{target_product:id,target_provider:'whatsapp'});
+  if(error){popup?.close();toast(error.message.includes('Limite')?'Você atingiu o limite de hoje. Amanhã o contador reinicia.':error.message,'error');await loadShareStatus();return}
+  if(popup)popup.location.href='https://wa.me/?text='+encodeURIComponent(adMessage(p));else window.location.href='https://wa.me/?text='+encodeURIComponent(adMessage(p));
+  p.queued=false;
+  await Promise.all([loadShareStatus(),loadPosts()]);
+  renderProducts();renderOffers();renderQueue();
+  toast('Compartilhamento registrado no uso diário.','ok');
+};
 
 async function syncOffers(){if(!requireAccess())return;const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({providers:['shopee','mercadolivre']})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Integração de ofertas ainda não configurada.');if(data.imported)toast(`${data.imported} oferta(s) importada(s).`,'ok');await loadProducts()}catch(e){toast(e.message+' Você ainda pode adicionar ofertas manualmente.','error')}finally{btns.forEach((b,i)=>{b.disabled=false;b.textContent=i?'↻ Buscar ofertas':'↻ Buscar ofertas'})}}
 $('syncOffers').onclick=syncOffers;$('syncOffers2').onclick=syncOffers;
@@ -254,12 +293,35 @@ async function loadIntegrations(){
   const dashShopee=$('dashShopeeStatus');
   if(dashShopee)dashShopee.textContent=shopeeConnected?'Conectada':'Pendente';
 
-  // WhatsApp continua no modo assistido.
-  const waRec=state.integrations.find(x=>x.provider==='whatsapp');
-  const waText=waRec?.status==='connected'?'Conectada':'Assistido';
+  // WHATSAPP CLOUD API: o status real vem da Edge Function e nunca expõe o token.
+  let waConnected=false;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session?.access_token){
+      const r=await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-status?t=${Date.now()}`,{
+        method:'GET',
+        cache:'no-store',
+        headers:{'Accept':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY}
+      });
+      const d=await r.json().catch(()=>({}));
+      waConnected=r.ok&&d.connected===true;
+      state.whatsapp={connected:waConnected,verified_name:d.verified_name||null,phone_mask:d.phone_mask||null,has_default_recipient:!!d.has_default_recipient};
+    }
+  }catch(e){
+    console.warn('Falha ao consultar whatsapp-status:',e);
+    state.whatsapp={connected:false,verified_name:null,phone_mask:null,has_default_recipient:false};
+  }
   ['waStatus','waStatus2'].forEach(id=>{
     const el=$(id);
-    if(el)el.textContent=waText;
+    if(el){el.textContent=waConnected?'Conectada':'Pendente';el.classList.toggle('connectedStatus',waConnected);}
+  });
+  const dashWa=$('dashWaStatus');
+  if(dashWa)dashWa.textContent=waConnected?'Conectado':'Pendente';
+  const dashWaFallback=document.querySelector('#view-dashboard .integrationRows div:nth-child(3) b');
+  if(dashWaFallback)dashWaFallback.textContent=waConnected?'Conectado':'Pendente';
+  document.querySelectorAll('.connectProvider[data-provider="whatsapp"]').forEach(btn=>{
+    btn.textContent=waConnected?'Gerenciar API':'Conectar API';
+    btn.disabled=false;
   });
 
   // MERCADO LIVRE: o retorno OAuth apenas avisa que devemos consultar o backend.
@@ -318,6 +380,19 @@ document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>
     return;
   }
 
+  if(provider==='whatsapp'){
+    $('waWabaId').value='';
+    $('waPhoneNumberId').value='';
+    $('waAccessToken').value='';
+    $('waDefaultRecipient').value='';
+    $('waConnectMsg').textContent=state.whatsapp.connected
+      ? `Conectada${state.whatsapp.verified_name?' como '+state.whatsapp.verified_name:''}${state.whatsapp.phone_mask?' • '+state.whatsapp.phone_mask:''}. Para trocar as credenciais, preencha os campos novamente.`
+      : 'Informe os dados da Meta. O token será enviado somente ao backend e armazenado criptografado.';
+    $('waTestArea').classList.toggle('hidden',!state.whatsapp.connected);
+    modal('whatsappConnectModal');
+    return;
+  }
+
   try{
     const{data:{session}}=await sb.auth.getSession();
     if(!session)throw new Error('Sessão expirada. Faça login novamente.');
@@ -334,6 +409,55 @@ document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>
     toast('Não foi possível iniciar a integração: '+e.message,'error');
   }
 });
+
+
+if($('saveWhatsAppConnect'))$('saveWhatsAppConnect').onclick=async()=>{
+  if(!requireAccess())return;
+  const waba_id=$('waWabaId').value.trim();
+  const phone_number_id=$('waPhoneNumberId').value.trim();
+  const access_token=$('waAccessToken').value.trim();
+  const default_recipient=$('waDefaultRecipient').value.trim();
+  const msg=$('waConnectMsg');
+  const btn=$('saveWhatsAppConnect');
+  if(!waba_id||!phone_number_id||!access_token){msg.textContent='Preencha WABA ID, Phone Number ID e Access Token.';return;}
+  const old=btn.textContent;btn.disabled=true;btn.textContent='Validando com a Meta...';msg.textContent='Validando a conta e o número na Meta...';
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-connect`,{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},
+      body:JSON.stringify({waba_id,phone_number_id,access_token,default_recipient})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.connected!==true)throw new Error(d.details||d.error||`Erro HTTP ${r.status}`);
+    $('waAccessToken').value='';
+    msg.textContent=`✅ Conectada${d.verified_name?' como '+d.verified_name:''}${d.phone_mask?' • '+d.phone_mask:''}.`;
+    $('waTestArea').classList.remove('hidden');
+    await loadIntegrations();
+    toast('WhatsApp Cloud API conectada com sucesso!','ok');
+  }catch(e){msg.textContent='❌ '+e.message;toast('Não foi possível conectar o WhatsApp.','error');}
+  finally{btn.disabled=false;btn.textContent=old;}
+};
+
+if($('sendWhatsAppTest'))$('sendWhatsAppTest').onclick=async()=>{
+  const to=$('waTestRecipient').value.trim();
+  const message=$('waTestMessage').value.trim()||'Olá! Esta é uma mensagem de teste do Bot Afiliados Premium. ✅';
+  const msg=$('waTestMsg');const btn=$('sendWhatsAppTest');const old=btn.textContent;
+  btn.disabled=true;btn.textContent='Enviando...';msg.textContent='Enviando pela Cloud API...';
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send-test`,{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},
+      body:JSON.stringify({to,message})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.success!==true)throw new Error(d.error||`Erro HTTP ${r.status}`);
+    msg.textContent=`✅ Mensagem enviada para ${d.to_mask||'o número configurado'}.`;
+    toast('Mensagem de teste enviada pela API!','ok');
+  }catch(e){msg.textContent='❌ '+e.message;toast('Falha no teste do WhatsApp.','error');}
+  finally{btn.disabled=false;btn.textContent=old;}
+};
 
 if($('saveShopeeConnect'))$('saveShopeeConnect').onclick=async()=>{
   if(!requireAccess())return;

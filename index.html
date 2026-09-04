@@ -94,7 +94,7 @@
           </div>
           <article class="panelCard performanceCard"><div class="boxTitle"><h3>Desempenho de hoje</h3><span class="tag">HOJE</span></div><div class="performanceBody performanceV2"><div class="fakeChart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div><small>Publicações</small><strong id="botPostsToday">0</strong><em>hoje</em></div><div><small>Cliques nos links</small><strong>0</strong><em>em breve</em></div><div><small>Conversões</small><strong>0</strong><em>em breve</em></div><div><small>Receita estimada</small><strong>R$ 0,00</strong><em>em breve</em></div></div></article>
           <section class="dashboardExtras">
-            <article class="panelCard"><div class="boxTitle"><h3>Status das integrações</h3><button class="textBtn" data-view-jump="integrations">Gerenciar</button></div><div class="integrationRows"><div><span>🛍 Shopee</span><b id="dashShopeeStatus">Pendente</b></div><div><span>🤝 Mercado Livre</span><b id="dashMlStatus">Conectado</b></div><div><span>🟢 WhatsApp</span><b>Assistido</b></div></div></article>
+            <article class="panelCard"><div class="boxTitle"><h3>Status das integrações</h3><button class="textBtn" data-view-jump="integrations">Gerenciar</button></div><div class="integrationRows"><div><span>🛍 Shopee</span><b id="dashShopeeStatus">Pendente</b></div><div><span>🤝 Mercado Livre</span><b id="dashMlStatus">Conectado</b></div><div><span>🟢 WhatsApp</span><b id="dashWaStatus">Pendente</b></div></div></article>
             <article class="panelCard"><div class="boxTitle"><h3>Alertas</h3><span class="tag">BOT</span></div><div class="smartAlerts"><div>⚠️ <span>Integrações que precisarem de atenção aparecerão aqui.</span></div><div>⏱️ <span>O limite diário e os próximos envios serão acompanhados.</span></div></div></article>
             <article class="panelCard"><div class="boxTitle"><h3>Próximas publicações</h3><button class="textBtn" data-view-jump="schedules">Ver agenda</button></div><div class="empty compactEmpty">Nenhuma publicação agendada.</div></article>
           </section>
@@ -117,10 +117,10 @@
     <section class="view" id="view-campaigns"><div class="sectionHead"><div><h2>Campanhas</h2><p>Monte mensagens e defina os canais de divulgação.</p></div><button id="newCampaign" class="primary compact protectedAction">＋ Nova Campanha</button></div><div class="panelCard"><div id="campaignList" class="tableList"></div></div></section>
     <section class="view" id="view-schedules"><div class="sectionHead"><div><h2>Agendamentos</h2><p>Agende campanhas para execução futura no backend.</p></div><button id="newSchedule" class="primary compact protectedAction">＋ Novo Agendamento</button></div><div class="panelCard"><div id="scheduleList" class="tableList"></div></div></section>
 
-    <section class="view" id="view-integrations"><div class="sectionHead"><div><h2>Integrações autorizadas</h2><p>Tokens privados ficam somente no Supabase Secrets/backend.</p></div></div><div class="integrationGrid"><article class="panelCard integrationCard"><span class="bigIcon">🛍</span><h3>Shopee</h3><p>Busca de ofertas e links depende da API oficial liberada para sua conta.</p><b id="shopeeStatus2">Pendente</b><button data-provider="shopee" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🤝</span><h3>Mercado Livre</h3><p>OAuth/API oficial para importar produtos e dados autorizados.</p><b id="mlStatus2">Pendente</b><button data-provider="mercadolivre" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🟢</span><h3>WhatsApp</h3><p>Compartilhamento assistido funciona; automação total requer Cloud API autorizada.</p><b id="waStatus2">Assistido</b><button data-provider="whatsapp" class="secondary connectProvider">Conectar API</button></article></div></section>
+    <section class="view" id="view-integrations"><div class="sectionHead"><div><h2>Integrações autorizadas</h2><p>Tokens privados ficam somente no Supabase Secrets/backend.</p></div></div><div class="integrationGrid"><article class="panelCard integrationCard"><span class="bigIcon">🛍</span><h3>Shopee</h3><p>Busca de ofertas e links depende da API oficial liberada para sua conta.</p><b id="shopeeStatus2">Pendente</b><button data-provider="shopee" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🤝</span><h3>Mercado Livre</h3><p>OAuth/API oficial para importar produtos e dados autorizados.</p><b id="mlStatus2">Pendente</b><button data-provider="mercadolivre" class="secondary connectProvider">Conectar</button></article><article class="panelCard integrationCard"><span class="bigIcon">🟢</span><h3>WhatsApp</h3><p>Cloud API oficial da Meta para envio pelo backend, sem expor o token no navegador.</p><b id="waStatus2">Pendente</b><button data-provider="whatsapp" class="secondary connectProvider">Conectar API</button></article></div></section>
 
     <section class="view" id="view-channels"><div class="sectionHead"><div><span class="sectionKicker">DESTINOS DE PUBLICAÇÃO</span><h2>📡 Canais & Grupos</h2><p>Organize onde as ofertas serão divulgadas. A postagem automática só funciona em canais com API autorizada.</p></div></div><div class="integrationGrid channelGrid">
-<article class="panelCard integrationCard"><span class="bigIcon">🟢</span><h3>WhatsApp</h3><p>Compartilhamento assistido já pode ser usado. Cloud API será necessária para automação total.</p><b>Assistido</b><button data-provider="whatsapp" class="secondary connectProvider">Configurar API</button></article>
+<article class="panelCard integrationCard"><span class="bigIcon">🟢</span><h3>WhatsApp</h3><p>Conecte a Cloud API oficial da Meta. O compartilhamento assistido continua disponível como fallback.</p><b id="waStatus">Pendente</b><button data-provider="whatsapp" class="secondary connectProvider">Configurar API</button></article>
 <article class="panelCard integrationCard"><span class="bigIcon">📸</span><h3>Instagram</h3><p>Espaço preparado para a integração oficial da Meta.</p><b>Pendente</b><button class="secondary channelSoon">Preparar integração</button></article>
 <article class="panelCard integrationCard"><span class="bigIcon">📘</span><h3>Facebook</h3><p>Páginas autorizadas poderão receber campanhas.</p><b>Pendente</b><button class="secondary channelSoon">Preparar integração</button></article>
 <article class="panelCard integrationCard"><span class="bigIcon">✈️</span><h3>Telegram</h3><p>Espaço preparado para canais e grupos.</p><b>Pendente</b><button class="secondary channelSoon">Preparar integração</button></article></div></section>
@@ -153,6 +153,30 @@
   </div>
 </div>
 
+
+<div id="whatsappConnectModal" class="modal hidden">
+  <div class="modalCard">
+    <button class="x closeModal" data-modal="whatsappConnectModal">×</button>
+    <h2>🟢 Conectar WhatsApp Cloud API</h2>
+    <p class="muted">Cada cliente conecta a própria conta da Meta. O Access Token não fica no GitHub nem no navegador: ele é enviado ao backend e armazenado criptografado.</p>
+    <label>WABA ID (ID da conta do WhatsApp Business)<input id="waWabaId" inputmode="numeric" autocomplete="off" placeholder="Somente números"></label>
+    <label>Phone Number ID (ID do número de telefone)<input id="waPhoneNumberId" inputmode="numeric" autocomplete="off" placeholder="Somente números"></label>
+    <label>Access Token<input id="waAccessToken" type="password" autocomplete="new-password" placeholder="Cole o token somente aqui"></label>
+    <label>Destinatário padrão para os envios da fila<input id="waDefaultRecipient" inputmode="tel" autocomplete="off" placeholder="Ex.: 5568999999999 (DDI + DDD + número)"></label>
+    <p class="muted">Use apenas destinatários que autorizaram receber mensagens. Mensagens livres fora da janela permitida pelo WhatsApp podem exigir template aprovado.</p>
+    <button id="saveWhatsAppConnect" class="primary full">Conectar e validar na Meta</button>
+    <p id="waConnectMsg" class="msg"></p>
+    <div id="waTestArea" class="hidden">
+      <hr>
+      <h3>Teste de envio</h3>
+      <label>Número de teste (opcional)<input id="waTestRecipient" inputmode="tel" autocomplete="off" placeholder="Deixe vazio para usar o destinatário padrão"></label>
+      <label>Mensagem<textarea id="waTestMessage" rows="4">Olá! Esta é uma mensagem de teste do Bot Afiliados Premium. ✅</textarea></label>
+      <button id="sendWhatsAppTest" class="secondary full">Enviar mensagem de teste</button>
+      <p id="waTestMsg" class="msg"></p>
+    </div>
+  </div>
+</div>
+
 <div id="botConfigModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="botConfigModal">×</button><h2>⚙ Configurar Bot Automático</h2><p class="muted">Na V5.1 estas preferências ficam salvas no navegador. A execução 24h será conectada ao worker/backend.</p><div class="two"><label>Intervalo<select id="botInterval"><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60">1 hora</option><option value="120">2 horas</option></select></label><label>Desconto mínimo %<input id="botMinDiscount" type="number" value="20"></label></div><div class="two"><label>Preço mínimo<input id="botMinPrice" type="number" value="10"></label><label>Preço máximo<input id="botMaxPrice" type="number" value="1000"></label></div><label>Máximo de postagens por dia<input id="botDailyLimit" type="number" value="30"></label><div class="channelChecks"><label class="check"><input id="botUseML" type="checkbox" checked> Mercado Livre</label><label class="check"><input id="botUseShopee" type="checkbox"> Shopee</label><label class="check"><input id="botUseWhats" type="checkbox" checked> WhatsApp</label><label class="check"><input id="botUseInstagram" type="checkbox"> Instagram</label></div><button id="saveBotConfig" class="primary full">Salvar configurações</button></div></div>
 <div id="productModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="productModal">×</button><h2>Adicionar oferta/produto</h2><label>Você também pode colar o texto completo da oferta<textarea id="pPaste" rows="3" placeholder="Dê uma olhada em ... por R$... https://..."></textarea></label><button id="parseOffer" class="secondary full">Ler texto da oferta</button><label>Título<input id="pTitle"></label><div class="two"><label>Preço atual<input id="pPrice" placeholder="99,90"></label><label>Preço antigo<input id="pOldPrice" placeholder="149,90"></label></div><div class="two"><label>Desconto %<input id="pDiscount" type="number"></label><label>Plataforma<select id="pPlatform"><option value="shopee">Shopee</option><option value="mercadolivre">Mercado Livre</option></select></label></div><label>Link de afiliado<input id="pLink" placeholder="https://..."></label><label>Imagem (URL)<input id="pImage" placeholder="https://..."></label><label>Categoria<input id="pCategory" placeholder="Geral"></label><button id="saveProduct" class="primary">Salvar no Supabase</button><p id="pMsg" class="msg"></p></div></div>
 
@@ -160,6 +184,6 @@
 <div id="scheduleModal" class="modal hidden"><div class="modalCard"><button class="x closeModal" data-modal="scheduleModal">×</button><h2>Novo Agendamento</h2><label>Campanha<select id="sCampaign"></select></label><label>Data e hora<input id="sWhen" type="datetime-local"></label><button id="saveSchedule" class="primary">Agendar</button><p id="sMsg" class="msg"></p></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=5.1.9"></script>
+<script src="app.js?v=5.2.0"></script>
 </body>
 </html>
