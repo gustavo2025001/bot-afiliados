@@ -5,7 +5,7 @@ const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
-const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false,verified_name:null,phone_mask:null,has_default_recipient:false},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},previewId:null};
+const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false,verified_name:null,phone_mask:null,has_default_recipient:false},instagram:{connected:false,username:null,account_type:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},previewId:null};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
@@ -167,7 +167,7 @@ function startProductsRealtime(){
 function renderAll(){renderProducts();renderOffers();renderQueue();renderCampaigns();renderSchedules();renderPosts();renderUsage();renderBotV51()}
 function renderProducts(){if(!$('productList'))return;$('offerCount').textContent=state.products.length;$('queueCount').textContent=state.products.filter(x=>x.queued).length;$('productList').innerHTML=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><div class="rowActions"><button class="iconBtn" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Fila':'+ Fila'}</button><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';const mini=state.products.slice(0,5);$('offerListMini').innerHTML=mini.map(p=>`<div class="miniOffer"><div class="miniThumb">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍'}</div><div><b>${esc(p.title)}</b><small>${money(p.price)} • ${esc(p.platform)}</small></div><span class="tag">${p.discount_percent?'-'+p.discount_percent+'%':'OFERTA'}</span></div>`).join('')||'<div class="empty">Nenhuma oferta ainda.</div>'}
 function filteredOffers(){const q=($('offerSearch')?.value||'').toLowerCase(),plat=$('offerPlatform')?.value||'all',f=$('offerFilter')?.value||'all';return state.products.filter(p=>(!q||[p.title,p.category,p.platform].join(' ').toLowerCase().includes(q))&&(plat==='all'||p.platform===plat)&&(f==='all'||f==='queue'&&p.queued||f==='favorite'&&p.favorite))}
-function renderOffers(){if(!$('offerGrid'))return;const list=filteredOffers();$('offerGrid').innerHTML=list.map(p=>`<article class="offerCard"><div class="offerImage">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.title)}" loading="lazy">`:'🛍️'}</div><div class="offerBody"><div class="offerTop"><span class="platformTag">${esc(p.platform).toUpperCase()}</span>${p.discount_percent?`<span class="discountTag">-${p.discount_percent}%</span>`:''}</div><h3>${esc(p.title)}</h3>${Number(p.old_price)>Number(p.price)?`<div class="oldPrice">${money(p.old_price)}</div>`:''}<div class="price">${money(p.price)}</div><div class="offerActions"><button class="${p.queued?'queueActive':''}" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Na fila':'+ Fila'}</button><button onclick="favoriteProduct('${p.id}',${!p.favorite})">${p.favorite?'♥ Favorito':'♡ Favoritar'}</button><button onclick="selectPreview('${p.id}')">👁 Prévia</button><button onclick="shareWhatsApp('${p.id}')">🟢 WhatsApp</button></div></div></article>`).join('')||'<div class="empty">Nenhuma oferta encontrada.</div>'}
+function renderOffers(){if(!$('offerGrid'))return;const list=filteredOffers();$('offerGrid').innerHTML=list.map(p=>`<article class="offerCard"><div class="offerImage">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.title)}" loading="lazy">`:'🛍️'}</div><div class="offerBody"><div class="offerTop"><span class="platformTag">${esc(p.platform).toUpperCase()}</span>${p.discount_percent?`<span class="discountTag">-${p.discount_percent}%</span>`:''}</div><h3>${esc(p.title)}</h3>${Number(p.old_price)>Number(p.price)?`<div class="oldPrice">${money(p.old_price)}</div>`:''}<div class="price">${money(p.price)}</div><div class="offerActions"><button class="${p.queued?'queueActive':''}" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Na fila':'+ Fila'}</button><button onclick="favoriteProduct('${p.id}',${!p.favorite})">${p.favorite?'♥ Favorito':'♡ Favoritar'}</button><button onclick="selectPreview('${p.id}')">👁 Prévia</button><button onclick="shareWhatsApp('${p.id}')">🟢 WhatsApp</button><button onclick="publishInstagram('${p.id}')">📸 Instagram</button></div></div></article>`).join('')||'<div class="empty">Nenhuma oferta encontrada.</div>'}
 ['offerSearch','offerPlatform','offerFilter'].forEach(id=>$(id)?.addEventListener(id==='offerSearch'?'input':'change',renderOffers));
 $('saveProduct').onclick=async()=>{if(!requireAccess())return;const title=$('pTitle').value.trim(),link=$('pLink').value.trim();if(!title||!link)return $('pMsg').textContent='Preencha título e link.';$('pMsg').textContent='Salvando...';const num=id=>Number(String($(id).value||'0').replace(/\./g,'').replace(',','.'))||0;const payload={user_id:state.user.id,title,price:num('pPrice'),old_price:num('pOldPrice'),discount_percent:Number($('pDiscount').value)||0,platform:$('pPlatform').value,affiliate_url:link,image_url:$('pImage').value.trim()||null,category:$('pCategory').value.trim()||'Geral',source:'manual'};const{error}=await sb.from('products').insert(payload);if(error)return $('pMsg').textContent=error.message;closeModal('productModal');await loadProducts();toast('Oferta salva no Supabase.','ok')};
 window.deleteProduct=async id=>{if(!requireAccess())return;if(!confirm('Excluir este produto?'))return;const{error}=await sb.from('products').delete().eq('id',id);if(error)return toast(error.message,'error');await loadProducts();toast('Produto excluído.','ok')};
@@ -177,9 +177,9 @@ window.favoriteProduct=async(id,on)=>{const{error}=await sb.rpc('toggle_product_
 function adMessage(p){const old=Number(p.old_price)>Number(p.price)?`💸 De: ${money(p.old_price)}\n`:'';const disc=p.discount_percent?`🔥 ${p.discount_percent}% OFF\n`:'';return `🔥 OFERTA ${String(p.platform||'').toUpperCase()} 🔥\n\n🛍️ ${p.title}\n${old}💰 Por: ${money(p.price)}\n${disc}\n🛒 Confira agora:\n${p.affiliate_url}`}
 window.selectPreview=id=>{state.previewId=id;renderPreview();showView('queue')};
 function renderQueue(){if(!$('queueList'))return;const q=state.products.filter(x=>x.queued);$('queueCount').textContent=q.length;$('queueList').innerHTML=q.map((p,i)=>`<div class="tableRow"><div><b>${String(i+1).padStart(2,'0')} • ${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><span class="tag">NA FILA</span><span>${p.discount_percent?'-'+p.discount_percent+'%':'Oferta'}</span><div class="rowActions"><button class="iconBtn" onclick="selectPreview('${p.id}')">Prévia</button><button class="dangerBtn" onclick="queueProduct('${p.id}',false)">Remover</button></div></div>`).join('')||'<div class="empty">Fila vazia. Adicione ofertas na página Ofertas.</div>';if(!state.previewId&&q[0])state.previewId=q[0].id;if(state.previewId&&!state.products.some(x=>x.id===state.previewId))state.previewId=q[0]?.id||null;renderPreview()}
-function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;$('previewCopy').disabled=false}
+function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;if($('previewInstagram'))$('previewInstagram').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;if($('previewInstagram'))$('previewInstagram').disabled=false;$('previewCopy').disabled=false}
 $('previewCopy').onclick=async()=>{const p=state.products.find(x=>x.id===state.previewId);if(!p)return;await navigator.clipboard.writeText(adMessage(p));toast('Mensagem copiada.','ok')};
-$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);$('shareNext').onclick=()=>{const p=state.products.find(x=>x.queued);if(!p)return toast('A fila está vazia.','error');shareWhatsApp(p.id)};
+$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const p=state.products.find(x=>x.queued);if(!p)return toast('A fila está vazia.','error');shareWhatsApp(p.id)};
 window.shareWhatsApp=async id=>{
   if(!requireAccess())return;
   const p=state.products.find(x=>x.id===id);
@@ -219,6 +219,38 @@ window.shareWhatsApp=async id=>{
   await Promise.all([loadShareStatus(),loadPosts()]);
   renderProducts();renderOffers();renderQueue();
   toast('Compartilhamento registrado no uso diário.','ok');
+};
+
+
+function instagramCaption(p){
+  const old=Number(p.old_price)>Number(p.price)?`💸 De: ${money(p.old_price)}\n`:'';
+  const disc=p.discount_percent?`🔥 ${p.discount_percent}% OFF\n`:'';
+  return `🔥 OFERTA ESPECIAL 🔥\n\n🛍️ ${p.title}\n${old}💰 Por: ${money(p.price)}\n${disc}\n🔗 Link da oferta: ${p.affiliate_url}\n\n#ofertas #promocao #achadinhos`;
+}
+
+window.publishInstagram=async id=>{
+  if(!requireAccess())return;
+  const p=state.products.find(x=>x.id===id);
+  if(!p)return;
+  if(!p.image_url)return toast('Para publicar no Instagram, esta oferta precisa ter uma URL pública de imagem.','error');
+  if(!state.instagram?.connected){toast('Conecte o Instagram primeiro.','error');showView('integrations');return;}
+  const ok=confirm(`Publicar esta oferta no Instagram @${state.instagram.username||'conectado'}?`);
+  if(!ok)return;
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/instagram-publish`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},
+      body:JSON.stringify({product_id:id,caption:instagramCaption(p)})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.success!==true)throw new Error(d.error||`Erro HTTP ${r.status}`);
+    await Promise.all([loadShareStatus(),loadPosts(),loadProducts()]);
+    toast(`Publicado no Instagram${state.instagram.username?' @'+state.instagram.username:''}!`,'ok');
+  }catch(e){
+    toast('Instagram: '+(e?.message||String(e)),'error');
+  }
 };
 
 async function syncOffers(){if(!requireAccess())return;const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({providers:['shopee','mercadolivre']})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Integração de ofertas ainda não configurada.');if(data.imported)toast(`${data.imported} oferta(s) importada(s).`,'ok');await loadProducts()}catch(e){toast(e.message+' Você ainda pode adicionar ofertas manualmente.','error')}finally{btns.forEach((b,i)=>{b.disabled=false;b.textContent=i?'↻ Buscar ofertas':'↻ Buscar ofertas'})}}
@@ -324,6 +356,42 @@ async function loadIntegrations(){
     btn.disabled=false;
   });
 
+  // INSTAGRAM: status real vem do backend por usuário. O navegador nunca recebe o token.
+  const igParams=new URLSearchParams(location.search);
+  const returnedFromIg=igParams.get('ig')==='connected';
+  if(returnedFromIg){
+    igParams.delete('ig');
+    const qs=igParams.toString();
+    history.replaceState({},'',location.pathname+(qs?'?'+qs:'')+location.hash);
+  }
+
+  let igConnected=false;
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(session?.access_token){
+      const r=await fetch(`${SUPABASE_URL}/functions/v1/instagram-status?t=${Date.now()}`,{
+        method:'GET',cache:'no-store',
+        headers:{'Accept':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY}
+      });
+      const d=await r.json().catch(()=>({}));
+      igConnected=r.ok&&d.connected===true;
+      state.instagram={connected:igConnected,username:d.username||null,account_type:d.account_type||null};
+      if(returnedFromIg&&igConnected)toast(`Instagram conectado${d.username?' @'+d.username:''}!`,'ok');
+    }
+  }catch(e){
+    console.warn('Falha ao consultar instagram-status:',e);
+    state.instagram={connected:false,username:null,account_type:null};
+  }
+  ['igStatus','igStatus2'].forEach(id=>{
+    const el=$(id);if(el){el.textContent=igConnected?(state.instagram.username?'@'+state.instagram.username:'Conectada'):'Pendente';el.classList.toggle('connectedStatus',igConnected);}
+  });
+  const dashIg=$('dashIgStatus');
+  if(dashIg)dashIg.textContent=igConnected?(state.instagram.username?'@'+state.instagram.username:'Conectado'):'Pendente';
+  document.querySelectorAll('.connectProvider[data-provider="instagram"]').forEach(btn=>{
+    btn.textContent=igConnected?'Reconectar Instagram':'Conectar Instagram';
+    btn.disabled=false;
+  });
+
   // MERCADO LIVRE: o retorno OAuth apenas avisa que devemos consultar o backend.
   // Nao marcamos conectado por query string nem localStorage.
   const params=new URLSearchParams(location.search);
@@ -396,7 +464,7 @@ document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>
   try{
     const{data:{session}}=await sb.auth.getSession();
     if(!session)throw new Error('Sessão expirada. Faça login novamente.');
-    const endpoint=provider==='mercadolivre'?'mercadolivre-auth':`auth-start?provider=${encodeURIComponent(provider)}`;
+    const endpoint=provider==='mercadolivre'?'mercadolivre-auth':provider==='instagram'?'instagram-auth':`auth-start?provider=${encodeURIComponent(provider)}`;
     const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{
       method:'GET',
       headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}
@@ -656,9 +724,9 @@ function renderBotV51(){
   setText('botPostsToday',state.share?.used||0);
   setText('botOnlineStatus',active?'● Configurado':'● Aguardando');
   setText('botHeadline',active?'Automação configurada 🚀':'Pronto para configurar');
-  setText('botStatusHelp',active?'Preferências salvas. O worker 24h do backend ainda precisa ser ligado.':'Conecte seus canais e escolha os filtros.');
+  setText('botStatusHelp',active?'Preferências salvas. O worker 24h do backend ainda precisa ser ligado.':'Conecte WhatsApp/Instagram e escolha os filtros.');
   setText('nextSearch',active?c.interval+' min':'—');
-  setText('channelCount',(c.useWhats?1:0)+(c.useInstagram?1:0));
+  setText('channelCount',(state.whatsapp?.connected?1:0)+(state.instagram?.connected?1:0));
   renderBotActivity();
 }
 

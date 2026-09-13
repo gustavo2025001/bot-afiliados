@@ -65,3 +65,6 @@ Shopee e Mercado Livre também só podem usar os endpoints e permissões oficial
 ## Segurança
 
 A publishable/anon key pode estar no frontend com RLS correto. Nunca publique `service_role`, client secret OAuth, segredo de webhook ou chave privada de pagamento. Assinaturas, limites e privilégios de Admin são validados no banco/backend, não apenas escondidos na interface.
+
+## V5.3 — Instagram oficial
+Foi adicionada integração com Instagram API with Instagram Login para contas Profissionais (Business/Creator), com OAuth no backend, token criptografado, status por usuário e publicação de ofertas com imagem no Feed. Consulte `ATIVAR_INSTAGRAM_V5.3.txt` e execute `supabase/instagram_v5_3.sql` antes do deploy das novas Edge Functions.
