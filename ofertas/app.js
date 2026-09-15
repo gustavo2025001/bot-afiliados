@@ -31,10 +31,20 @@ async function load(){
     return;
   }
   try{
-    const fields="id,title,price,platform,affiliate_url,image_url,active,created_at,updated_at";
-    const url=`${SUPABASE_URL}/rest/v1/products?select=${encodeURIComponent(fields)}&user_id=eq.${encodeURIComponent(owner)}&active=eq.true&order=updated_at.desc&limit=100`;
-    const r=await fetch(url,{headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${SUPABASE_ANON_KEY}`}});
-    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const url=`${SUPABASE_URL}/rest/v1/rpc/get_public_store_products`;
+    const r=await fetch(url,{
+      method:"POST",
+      headers:{
+        apikey:SUPABASE_ANON_KEY,
+        Authorization:`Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({p_user_id:owner})
+    });
+    if(!r.ok){
+      const errorText=await r.text();
+      throw new Error(`HTTP ${r.status}: ${errorText}`);
+    }
     products=await r.json();
     render();
   }catch(e){
