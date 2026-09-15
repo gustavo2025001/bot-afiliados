@@ -1,0 +1,27 @@
+BOT AFILIADOS — BASE OFICIAL RESTAURADA
+
+RAIZ = PAINEL
+/index.html
+/app.js
+/style.css
+
+VITRINE = PÁGINA SEPARADA
+/ofertas/index.html
+/ofertas/app.js
+/ofertas/style.css
+
+BACKEND
+/supabase/
+
+NUNCA copie index.html/app.js/style.css de /ofertas para a raiz.
+
+Próximas atualizações previstas:
+- botão Minha Vitrine no painel
+- vitrine individual por cliente
+- slug amigável sem mostrar UUID
+- nome/logo/redes sociais por cliente
+- categorias reais
+- Shopee + Mercado Livre
+- novas redes sociais
+- rotas centralizadas em site-config.js
+- tokens e secrets somente no backend/Supabase
