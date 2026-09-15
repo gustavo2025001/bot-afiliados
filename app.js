@@ -286,21 +286,7 @@ window.publishInstagram = async id => {
   }
 };
 
-async function syncOffers(){
-  if(!requireAccess())return;
-  try{
-    const {data:cfg}=await sb.from('shopee_affiliate_settings').select('enabled').eq('user_id',state.user.id).maybeSingle();
-    if(!cfg?.enabled){
-      document.querySelector('.connectProvider[data-provider="shopee"]')?.click();
-      toast('Configure primeiro seus links de Afiliado Shopee.','error');
-      return;
-    }
-    document.querySelector('.connectProvider[data-provider="shopee"]')?.click();
-    $('shopeeConnectMsg').textContent='Cole novas ofertas com seus links personalizados da Shopee para importar.';
-  }catch(e){
-    toast('Abra Integrações e configure a Shopee Afiliados.','error');
-  }
-}
+async function syncOffers(){if(!requireAccess())return;const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({providers:['shopee','mercadolivre']})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Integração de ofertas ainda não configurada.');if(data.imported)toast(`${data.imported} oferta(s) importada(s).`,'ok');await loadProducts()}catch(e){toast(e.message+' Você ainda pode adicionar ofertas manualmente.','error')}finally{btns.forEach((b,i)=>{b.disabled=false;b.textContent=i?'↻ Buscar ofertas':'↻ Buscar ofertas'})}}
 $('syncOffers').onclick=syncOffers;$('syncOffers2').onclick=syncOffers;
 
 function fillCampaignProducts(){$('cProduct').innerHTML='<option value="">Sem produto</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}
@@ -341,33 +327,36 @@ async function loadIntegrations(){
   // IMPORTANTE: nenhuma integracao e herdada do navegador ou de outro usuario.
   // Cada status precisa vir do backend/banco vinculado ao user_id da sessao atual.
 
-  // SHOPEE: "configurada" significa que o usuário ativou sua área de afiliado.
-  // Não representa OAuth/API oficial.
+  // SHOPEE: somente fica conectada quando ESTE usuario tiver credenciais validadas.
   let shopeeConnected=false;
   try{
     const {data:shopeeRow,error:shopeeError}=await sb
-      .from('shopee_affiliate_settings')
-      .select('enabled,affiliate_name')
+      .from('shopee_integrations')
+      .select('connected,status,app_id,updated_at')
       .eq('user_id',state.user.id)
       .maybeSingle();
-    if(shopeeError) console.warn('Falha ao consultar shopee_affiliate_settings:',shopeeError);
-    shopeeConnected=!!shopeeRow?.enabled;
+
+    if(shopeeError) console.warn('Falha ao consultar shopee_integrations:',shopeeError);
+    shopeeConnected=!!shopeeRow && !!shopeeRow.app_id && shopeeRow.connected===true && shopeeRow.status==='connected';
   }catch(e){
-    console.warn('Falha ao consultar configuração Shopee:',e);
+    console.warn('Falha ao consultar status da Shopee:',e);
+    shopeeConnected=false;
   }
 
   ['shopeeStatus','shopeeStatus2'].forEach(id=>{
-    if($(id)){
-      $(id).textContent=shopeeConnected?'Configurada':'Não configurada';
-      $(id).classList.toggle('connectedStatus',shopeeConnected);
+    const el=$(id);
+    if(el){
+      el.textContent=shopeeConnected?'Conectada':'Pendente';
+      el.classList.toggle('connectedStatus',shopeeConnected);
     }
   });
+
   document.querySelectorAll('.connectProvider[data-provider="shopee"]').forEach(btn=>{
-    btn.textContent=shopeeConnected?'Gerenciar afiliado':'Configurar afiliado';
-    btn.disabled=false;
+    btn.textContent=shopeeConnected?'Conectada ✓':'Conectar';
+    btn.disabled=shopeeConnected;
   });
   const dashShopee=$('dashShopeeStatus');
-  if(dashShopee)dashShopee.textContent=shopeeConnected?'Configurada':'Não configurada';
+  if(dashShopee)dashShopee.textContent=shopeeConnected?'Conectada':'Pendente';
 
   // WHATSAPP CLOUD API: o status real vem da Edge Function e nunca expõe o token.
   let waConnected=false;
@@ -485,13 +474,9 @@ document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>
   const provider=btn.dataset.provider;
 
   if(provider==='shopee'){
-    $('shopeeAffiliateName').value='';
-    $('shopeeAffiliateLinks').value='';
-    $('shopeeConnectMsg').textContent='Cole links personalizados gerados pela sua própria conta de Afiliado Shopee.';
-    try{
-      const {data:cfg}=await sb.from('shopee_affiliate_settings').select('affiliate_name').eq('user_id',state.user.id).maybeSingle();
-      if(cfg?.affiliate_name)$('shopeeAffiliateName').value=cfg.affiliate_name;
-    }catch(e){}
+    $('shopeeAppId').value='';
+    $('shopeeSecret').value='';
+    $('shopeeConnectMsg').textContent='';
     modal('shopeeConnectModal');
     return;
   }
@@ -577,68 +562,50 @@ if($('sendWhatsAppTest'))$('sendWhatsAppTest').onclick=async()=>{
 
 if($('saveShopeeConnect'))$('saveShopeeConnect').onclick=async()=>{
   if(!requireAccess())return;
-  const affiliate_name=$('shopeeAffiliateName').value.trim();
-  const raw=$('shopeeAffiliateLinks').value.trim();
+  const appId=$('shopeeAppId').value.trim();
+  const secret=$('shopeeSecret').value.trim();
   const msg=$('shopeeConnectMsg');
   const btn=$('saveShopeeConnect');
 
-  if(!raw){
-    msg.textContent='Cole pelo menos um link/oferta de afiliado gerado pela Shopee.';
-    return;
-  }
-
-  const lines=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
-  const parsed=lines.map(parseOfferText).filter(Boolean).filter(x=>x.platform==='shopee');
-  if(!parsed.length){
-    msg.textContent='Não encontrei um link Shopee válido no texto colado.';
+  if(!appId||!secret){
+    msg.textContent='Informe o App ID e o Secret da sua conta Shopee.';
     return;
   }
 
   const old=btn.textContent;
   btn.disabled=true;
-  btn.textContent='Importando...';
-  msg.textContent='Salvando suas ofertas no seu usuário...';
+  btn.textContent='Validando...';
+  msg.textContent='Validando credenciais com a Shopee...';
 
   try{
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session?.user?.id)throw new Error('Sessão expirada. Faça login novamente.');
+    const{data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
 
-    const cfg={
-      user_id:session.user.id,
-      affiliate_name:affiliate_name||null,
-      enabled:true,
-      updated_at:new Date().toISOString()
-    };
-    const {error:cfgError}=await sb.from('shopee_affiliate_settings').upsert(cfg,{onConflict:'user_id'});
-    if(cfgError)throw cfgError;
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/shopee-connect`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${session.access_token}`,
+        'apikey':SUPABASE_ANON_KEY
+      },
+      body:JSON.stringify({app_id:appId,secret})
+    });
 
-    let imported=0;
-    for(const p of parsed){
-      const payload={
-        user_id:session.user.id,
-        title:p.title,
-        price:p.price||0,
-        old_price:p.old_price||0,
-        discount_percent:p.discount_percent||0,
-        platform:'shopee',
-        affiliate_url:p.affiliate_url,
-        category:'Geral',
-        source:'shopee_affiliate_link',
-        active:true
-      };
-      const {error}=await sb.from('products').insert(payload);
-      if(!error)imported++;
-      else console.warn('Oferta Shopee não importada:',error);
+    const data=await r.json().catch(()=>({}));
+    console.log('shopee-connect:',r.status,data);
+
+    if(!r.ok||data.success!==true||data.connected!==true){
+      throw new Error(data.error||`Erro HTTP ${r.status}`);
     }
 
-    $('shopeeAffiliateLinks').value='';
-    msg.textContent=`✅ Shopee configurada. ${imported} oferta(s) importada(s) para a sua conta.`;
+    $('shopeeSecret').value='';
+    closeModal('shopeeConnectModal');
     await loadIntegrations();
-    await loadProducts();
-    toast(`Shopee configurada • ${imported} oferta(s) importada(s).`,'ok');
+    toast('Shopee conectada com sucesso!','ok');
   }catch(e){
-    console.error('Configuração Shopee:',e);
-    msg.textContent='❌ '+(e?.message||String(e));
+    console.error('Shopee connect:',e);
+    msg.textContent='Não foi possível conectar: '+(e?.message||String(e));
   }finally{
     btn.disabled=false;
     btn.textContent=old;
