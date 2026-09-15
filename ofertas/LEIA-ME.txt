@@ -1,0 +1,11 @@
+VITRINE POR CLIENTE
+
+URL:
+https://gustavo2025001.github.io/bot-afiliados/ofertas/?loja=UUID_DO_USUARIO
+
+A vitrine filtra publicamente apenas produtos ativos do user_id informado.
+O botão Comprar usa affiliate_url daquele produto.
+
+IMPORTANTE:
+Para funcionar no navegador, a política RLS da tabela products precisa permitir SELECT público SOMENTE dos campos/linhas apropriados para a vitrine, ou deve ser criada uma Edge Function pública de leitura.
+Não desative RLS e não exponha dados privados.
