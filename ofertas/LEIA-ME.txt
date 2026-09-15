@@ -1,17 +1,11 @@
-BOT AFILIADOS — VITRINE DO CLIENTE
-VERSÃO ATUALIZADA
+VITRINE BOT AFILIADOS — VERSÃO PRONTA
 
-Mantido:
-- RPC segura get_public_store_products
-- Vitrine separada por cliente
-- affiliate_url do próprio cliente
-- Busca e filtros
-- Layout responsivo
-- Assinatura GustavoBarbosa
-
-Corrigido:
-- ENTRAR NO BOT -> https://gustavo2025001.github.io/bot-afiliados/#bot
-- QUERO CONHECER -> https://gustavo2025001.github.io/bot-afiliados/#bot
-- Logo/retorno ao Bot também preserva /bot-afiliados/
-
-Esta entrega contém a pasta /ofertas completa e atualizada.
+- Assinatura GustavoBarbosa no topo e rodapé.
+- "Conheça o Bot" agora rola para uma seção explicativa completa.
+- "Entrar no Bot" continua abrindo o painel.
+- Vitrine sem parâmetro abre a loja do Gustavo.
+- Para clientes: use ?loja=UUID para mostrar somente os produtos daquele cliente.
+- Busca e filtros: Todas, Shopee, Mercado Livre e Mais recentes.
+- Compra abre o affiliate_url da oferta.
+- Painel da raiz NÃO foi alterado.
+- A seção "Conheça o Bot" separa claramente o que já funciona do que ainda depende de API/backend.

@@ -4,60 +4,149 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#090d18">
+  <meta name="description" content="Vitrine de ofertas do Bot Afiliados — ofertas com links de afiliado e acesso ao Bot Afiliados.">
   <title>Ofertas | Bot Afiliados</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.0">
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="https://gustavo2025001.github.io/bot-afiliados/#bot"><span class="bot">🤖</span><span><b>BOT AFILIADOS</b><small>OFERTAS REAIS. COMISSÕES REAIS.</small></span></a>
-  <nav><a href="#ofertas">Ofertas</a><a href="#como">Como funciona</a><a href="#bot">Conheça o Bot</a></nav>
+  <a class="brand" href="#inicio">
+    <span class="bot">🤖</span>
+    <span><b>BOT AFILIADOS</b><small>OFERTAS REAIS. LINKS DE AFILIADO.</small></span>
+  </a>
+
+  <nav>
+    <a href="#ofertas">Ofertas</a>
+    <a href="#como">Como funciona</a>
+    <a href="#conheca-bot">Conheça o Bot</a>
+  </nav>
+
+  <div class="top-signature" aria-label="Criado por GustavoBarbosa">
+    <small>by</small>
+    <img src="gustavobarbosa-signature.png" alt="GustavoBarbosa">
+  </div>
+
   <a class="panel" href="https://gustavo2025001.github.io/bot-afiliados/#bot">ENTRAR NO BOT</a>
 </header>
 
-<section class="hero">
+<section id="inicio" class="hero">
   <div>
     <span class="eyebrow">VITRINE DE OFERTAS</span>
     <h1>ACHADINHOS DA SHOPEE<br><em>EM UM SÓ LUGAR!</em></h1>
-    <p id="shopSubtitle">Ofertas selecionadas e atualizadas automaticamente.</p>
+    <p id="shopSubtitle">Ofertas selecionadas e atualizadas pelo Bot Afiliados.</p>
     <div class="benefits">
-      <span>⚡ Ofertas atualizadas</span><span>🛡️ Links do afiliado</span>
-      <span>🏷️ Bons preços</span><span>💜 Apoie esta vitrine</span>
+      <span>⚡ Ofertas atualizadas</span>
+      <span>🔗 Links do afiliado</span>
+      <span>🏷️ Bons preços</span>
+      <span>💜 Apoie esta vitrine</span>
     </div>
   </div>
-  <div class="hero-card"><div class="mascot">🤖</div><b>COMPRE PELO LINK<br>DA OFERTA</b><small>E APOIE ESTA VITRINE!</small></div>
+  <div class="hero-card">
+    <div class="mascot">🤖</div>
+    <b>ESCOLHA A OFERTA<br>E COMPRE PELO LINK</b>
+    <small>VOCÊ VAI DIRETO PARA A LOJA.</small>
+  </div>
 </section>
 
 <main id="ofertas">
+  <div class="section-title">
+    <span>OFERTAS</span>
+    <h2>Encontre seu próximo achadinho</h2>
+    <p>Pesquise e abra a oferta diretamente pelo link do afiliado.</p>
+  </div>
+
   <div class="search">
-    <input id="searchInput" placeholder="🔎  Buscar produtos...">
+    <input id="searchInput" placeholder="🔎  Buscar produtos..." autocomplete="off">
     <button id="searchBtn">Buscar</button>
   </div>
+
   <div class="filters">
     <button class="active" data-filter="all">Todas</button>
     <button data-filter="shopee">Shopee</button>
+    <button data-filter="mercadolivre">Mercado Livre</button>
     <button data-filter="recent">Mais recentes</button>
   </div>
+
   <div id="status" class="status">Carregando ofertas...</div>
   <div id="grid" class="grid"></div>
 </main>
 
 <section id="como" class="how">
-  <h2>Como funciona?</h2>
-  <p>Escolha uma oferta e toque em <b>Comprar na Shopee</b>. Você será direcionado pelo link de afiliado do dono desta vitrine.</p>
+  <span class="eyebrow">COMO FUNCIONA A VITRINE</span>
+  <h2>Da oferta até a compra em 3 passos</h2>
+  <div class="steps">
+    <article><b>1</b><span>🔎</span><h3>Escolha</h3><p>Pesquise entre as ofertas disponíveis nesta vitrine.</p></article>
+    <article><b>2</b><span>🛒</span><h3>Abra a oferta</h3><p>Toque em comprar para abrir o link de afiliado correspondente.</p></article>
+    <article><b>3</b><span>💜</span><h3>Compre na loja</h3><p>A compra é concluída na plataforma da oferta, não dentro desta vitrine.</p></article>
+  </div>
+  <p class="disclaimer">Os preços e a disponibilidade podem mudar na loja de destino. Esta vitrine organiza e apresenta links de afiliado; o pagamento e a entrega são realizados pela plataforma onde o produto é vendido.</p>
 </section>
 
-<section id="bot" class="bot-promo">
-  <div class="mini">🤖</div>
-  <div><h2>CONHEÇA O <em>BOT AFILIADOS</em></h2>
-  <p>Automatize suas ofertas, publicações e sua própria vitrine.</p>
-  <div class="checks">✓ Busca ofertas automaticamente &nbsp; ✓ Publica nas redes sociais &nbsp; ✓ Organiza seus links de afiliado</div></div>
-  <a href="https://gustavo2025001.github.io/bot-afiliados/#bot">QUERO CONHECER →</a>
+<section id="conheca-bot" class="about-bot">
+  <div class="about-head">
+    <div class="about-icon">🤖</div>
+    <div>
+      <span class="eyebrow">PARA QUEM TRABALHA COM AFILIADOS</span>
+      <h2>CONHEÇA O <em>BOT AFILIADOS</em></h2>
+      <p>Um painel para centralizar ofertas, produtos, fila de divulgação, campanhas, agendamentos, integrações e sua própria vitrine.</p>
+    </div>
+  </div>
+
+  <div class="status-columns">
+    <article class="feature-box works">
+      <div class="feature-title"><span>✓</span><h3>O que já funciona</h3></div>
+      <ul>
+        <li><b>Painel com login:</b> cada usuário acessa sua conta.</li>
+        <li><b>Ofertas e produtos:</b> catálogo organizado no painel.</li>
+        <li><b>Fila:</b> produtos podem ser preparados para divulgação.</li>
+        <li><b>Campanhas e agendamentos:</b> estrutura disponível no painel.</li>
+        <li><b>Instagram:</b> publicação pela integração autorizada já foi testada.</li>
+        <li><b>WhatsApp assistido:</b> gera a mensagem e abre o compartilhamento.</li>
+        <li><b>Vitrine:</b> apresenta ofertas usando os links de afiliado do dono da vitrine.</li>
+        <li><b>Planos e limites:</b> painel preparado para Básico, Pro e Premium.</li>
+      </ul>
+    </article>
+
+    <article class="feature-box building">
+      <div class="feature-title"><span>⚙</span><h3>O que ainda depende de integração</h3></div>
+      <ul>
+        <li><b>Automação 24h completa:</b> precisa do worker/backend executando as rotinas automaticamente.</li>
+        <li><b>Busca automática em todas as lojas:</b> depende das APIs e permissões oficiais de cada plataforma.</li>
+        <li><b>Mercado Livre:</b> depende da autorização OAuth/API da conta do cliente para os recursos conectados.</li>
+        <li><b>WhatsApp automático:</b> depende dos recursos permitidos pela API oficial; o modo assistido continua disponível.</li>
+        <li><b>Facebook e outros canais:</b> entram conforme as APIs e permissões oficiais forem conectadas.</li>
+        <li><b>Resultados/comissões:</b> variam conforme as regras do programa de afiliados e as compras efetivamente qualificadas.</li>
+      </ul>
+    </article>
+  </div>
+
+  <div class="flow">
+    <h3>A ideia do Bot Afiliados</h3>
+    <div class="flow-row">
+      <span>🔎 Buscar ofertas</span><i>→</i>
+      <span>🎯 Filtrar</span><i>→</i>
+      <span>☷ Colocar na fila</span><i>→</i>
+      <span>📣 Publicar</span><i>→</i>
+      <span>🛍️ Mostrar na vitrine</span>
+    </div>
+  </div>
+
+  <div class="plans">
+    <article><span>BÁSICO</span><strong>R$ 60</strong><small>/ 30 dias</small><p>Até 70 compartilhamentos por dia.</p></article>
+    <article class="featured"><span>PRO</span><strong>R$ 80</strong><small>/ 30 dias</small><p>Até 100 compartilhamentos por dia.</p></article>
+    <article><span>PREMIUM</span><strong>R$ 120</strong><small>/ 30 dias</small><p>Compartilhamentos diários ilimitados.</p></article>
+  </div>
+
+  <div class="about-cta">
+    <div><b>Quer usar o Bot Afiliados?</b><span>Entre no painel para acessar sua conta, integrações, ofertas e automações.</span></div>
+    <a href="https://gustavo2025001.github.io/bot-afiliados/#bot">ENTRAR NO BOT →</a>
+  </div>
 </section>
 
 <footer class="brand-footer">
   <div class="footer-brand">
     <b>🤖 BOT AFILIADOS</b>
-    <span>Esta vitrine é automatizada pelo Bot Afiliados.</span>
+    <span>Vitrine criada para organizar e divulgar ofertas de afiliados.</span>
   </div>
   <div class="creator-signature">
     <small>CRIADO POR</small>
@@ -65,6 +154,7 @@
   </div>
   <small>© 2026 Bot Afiliados</small>
 </footer>
-<script src="app.js"></script>
+
+<script src="app.js?v=2.0"></script>
 </body>
 </html>
