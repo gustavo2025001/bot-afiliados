@@ -1,0 +1,12 @@
+SHOPEE AFILIADOS V1
+
+1. Execute supabase/shopee_affiliate_v1.sql no SQL Editor do Supabase.
+2. Publique os arquivos do projeto no GitHub Pages.
+3. No painel: Integrações > Shopee Afiliados > Configurar afiliado.
+4. Cada cliente cola somente links personalizados gerados pela própria conta Shopee.
+5. As ofertas são gravadas com o user_id do cliente logado.
+6. A vitrine desse cliente usa os affiliate_url dele.
+
+Esta versão não finge OAuth/API da Shopee e não faz scraping.
+O botão Buscar ofertas abre a importação dos links personalizados do cliente.
+A busca automática deve ser adicionada apenas quando houver API/liberação oficial adequada.
