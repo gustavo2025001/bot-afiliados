@@ -228,28 +228,61 @@ function instagramCaption(p){
   return `🔥 OFERTA ESPECIAL 🔥\n\n🛍️ ${p.title}\n${old}💰 Por: ${money(p.price)}\n${disc}\n🔗 Link da oferta: ${p.affiliate_url}\n\n#ofertas #promocao #achadinhos`;
 }
 
-window.publishInstagram=async id=>{
-  if(!requireAccess())return;
-  const p=state.products.find(x=>x.id===id);
-  if(!p)return;
-  if(!p.image_url)return toast('Para publicar no Instagram, esta oferta precisa ter uma URL pública de imagem.','error');
-  if(!state.instagram?.connected){toast('Conecte o Instagram primeiro.','error');showView('integrations');return;}
-  const ok=confirm(`Publicar esta oferta no Instagram @${state.instagram.username||'conectado'}?`);
-  if(!ok)return;
-  try{
-    const{data:{session}}=await sb.auth.getSession();
-    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/instagram-publish`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},
-      body:JSON.stringify({product_id:id,caption:instagramCaption(p)})
+window.publishInstagram = async id => {
+  if (!requireAccess()) return;
+  const p = state.products.find(x => x.id === id);
+  if (!p) return toast('Oferta não encontrada.', 'error');
+  if (!p.image_url) return toast('Para publicar no Instagram, esta oferta precisa ter uma URL pública de imagem.', 'error');
+  if (!state.instagram?.connected) {
+    toast('Conecte o Instagram primeiro.', 'error');
+    showView('integrations');
+    return;
+  }
+
+  const ok = confirm(`Publicar esta oferta no Instagram @${state.instagram.username || 'conectado'}?`);
+  if (!ok) return;
+
+  try {
+    const { data: { session }, error: sessionError } = await sb.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session?.access_token) throw new Error('Sessão expirada. Faça login novamente.');
+
+    toast('Enviando oferta para o Instagram...');
+
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/instagram-publish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({
+        product_id: p.id,
+        title: p.title || '',
+        price: p.price ?? null,
+        platform: p.platform || '',
+        affiliate_url: p.affiliate_url || '',
+        image_url: p.image_url || '',
+        caption: instagramCaption(p)
+      })
     });
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok||d.success!==true)throw new Error(d.error||`Erro HTTP ${r.status}`);
-    await Promise.all([loadShareStatus(),loadPosts(),loadProducts()]);
-    toast(`Publicado no Instagram${state.instagram.username?' @'+state.instagram.username:''}!`,'ok');
-  }catch(e){
-    toast('Instagram: '+(e?.message||String(e)),'error');
+
+    const d = await r.json().catch(() => ({}));
+    console.log('instagram-publish:', r.status, d);
+
+    if (!r.ok || d.success !== true) {
+      throw new Error(d.error || d.message || `Erro HTTP ${r.status}`);
+    }
+
+    await Promise.all([loadShareStatus(), loadPosts(), loadProducts()]);
+    renderProducts();
+    renderOffers();
+    renderQueue();
+
+    toast(`Publicado no Instagram${state.instagram.username ? ' @' + state.instagram.username : ''}!`, 'ok');
+  } catch (e) {
+    console.error('Erro ao publicar no Instagram:', e);
+    toast('Instagram: ' + (e?.message || String(e)), 'error');
   }
 };
 
