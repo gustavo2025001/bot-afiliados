@@ -1,0 +1,18 @@
+BOT AFILIADOS V5 - MERCADO LIVRE
+
+A V5 agora possui a tela Integrações com Shopee, Mercado Livre e WhatsApp.
+O botão Mercado Livre > Conectar abre o OAuth oficial.
+
+Para concluir no Supabase:
+1. SQL Editor: execute supabase/mercadolivre_tokens.sql.
+2. Edge Functions: substitua o código de mercadolivre-callback pelo arquivo supabase/functions/mercadolivre-callback/index.ts e faça Deploy updates.
+3. Crie uma Edge Function chamada mercadolivre-status usando supabase/functions/mercadolivre-status/index.ts e faça Deploy.
+4. Em Edge Function Secrets, mantenha:
+   MERCADOLIVRE_CLIENT_ID
+   MERCADOLIVRE_CLIENT_SECRET
+   MERCADOLIVRE_REDIRECT_URI
+5. MERCADOLIVRE_REDIRECT_URI deve ser exatamente:
+   https://jhdezfnafhekimolfiuu.supabase.co/functions/v1/mercadolivre-callback
+6. No Mercado Livre Developers, use exatamente a mesma Redirect URI.
+
+IMPORTANTE: Client Secret não foi colocado no HTML/JavaScript público.

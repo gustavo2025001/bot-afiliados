@@ -1,0 +1,116 @@
+BOT AFILIADOS PREMIUM — ATUALIZAÇÃO WHATSAPP CLOUD API V5.2
+============================================================
+
+O que foi alterado com cuidado, sem remover a estrutura existente:
+
+1) Tela Integrações > WhatsApp
+- O botão "Conectar API" agora abre um formulário real.
+- Campos: WABA ID, Phone Number ID, Access Token e destinatário padrão.
+- O token NÃO vai para localStorage e NÃO é gravado no GitHub.
+- A conexão é validada diretamente na Graph API da Meta pelo backend.
+- Depois de conectado, o painel mostra "Conectada".
+
+2) Teste de envio
+- Depois de conectar, aparece o botão "Enviar mensagem de teste".
+- O envio é feito pela WhatsApp Cloud API oficial através do Supabase Edge Function.
+
+3) Fila / botão WhatsApp
+- Se a Cloud API estiver conectada, o botão "WhatsApp" e "Compartilhar próxima" enviam pelo backend automaticamente ao destinatário padrão configurado.
+- Se a Cloud API NÃO estiver conectada, o comportamento antigo (wa.me / compartilhamento assistido) continua funcionando como fallback.
+- O limite diário do plano é reservado antes do envio. Se a Meta falhar, a reserva é devolvida e o produto volta para a fila.
+
+4) Segurança por usuário
+- Cada usuário conecta a própria conta da Meta.
+- O token é criptografado com AES-256-GCM antes de ser salvo.
+- A chave de criptografia fica somente nos Supabase Secrets.
+- A tabela de credenciais tem RLS ligado e nenhuma policy para o navegador.
+
+ARQUIVOS NOVOS
+--------------
+- supabase/whatsapp_cloud_v5_2.sql
+- supabase/functions/whatsapp-connect/index.ts
+- supabase/functions/whatsapp-status/index.ts
+- supabase/functions/whatsapp-send-test/index.ts
+- supabase/functions/whatsapp-send-product/index.ts
+- cada função possui seu _shared.ts
+- GERAR_CHAVE_WHATSAPP.ps1
+
+ARQUIVOS ALTERADOS
+------------------
+- index.html
+- app.js
+
+PASSO 1 — SQL DO SUPABASE
+-------------------------
+No Supabase > SQL Editor, execute SOMENTE:
+
+supabase/whatsapp_cloud_v5_2.sql
+
+Esse SQL é aditivo. Ele não apaga seus produtos, usuários, campanhas, planos ou integrações existentes.
+
+PASSO 2 — CHAVE DE CRIPTOGRAFIA
+-------------------------------
+No Windows, clique com o botão direito em GERAR_CHAVE_WHATSAPP.ps1 e execute com PowerShell.
+Ele vai gerar algo como:
+
+WHATSAPP_TOKEN_ENCRYPTION_KEY=<64 caracteres hexadecimais>
+
+NÃO mande essa chave no chat e NÃO coloque no GitHub.
+Adicione no Supabase em Edge Functions > Secrets com o nome exato:
+
+WHATSAPP_TOKEN_ENCRYPTION_KEY
+
+Opcionalmente, adicione:
+META_GRAPH_VERSION=v25.0
+
+Se META_GRAPH_VERSION não existir, as funções usam v25.0 automaticamente.
+
+PASSO 3 — PUBLICAR AS EDGE FUNCTIONS
+------------------------------------
+Com o Supabase CLI conectado ao projeto, dentro da pasta do projeto execute:
+
+supabase functions deploy whatsapp-connect
+supabase functions deploy whatsapp-status
+supabase functions deploy whatsapp-send-test
+supabase functions deploy whatsapp-send-product
+
+As variáveis SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY são usadas somente no backend das funções.
+Nunca coloque SERVICE_ROLE no app.js.
+
+PASSO 4 — GITHUB PAGES
+----------------------
+Suba para o GitHub os arquivos atualizados da raiz:
+- index.html
+- app.js
+
+Pode manter os demais arquivos do projeto normalmente.
+O index.html já referencia app.js?v=5.2.0 para evitar cache da versão antiga.
+
+PASSO 5 — CONECTAR NO BOT
+-------------------------
+No Bot Afiliados:
+Integrações > WhatsApp > Conectar API
+
+Preencha no SEU navegador:
+- WABA ID
+- Phone Number ID
+- Access Token
+- Destinatário padrão com DDI + DDD + número, somente dígitos (ex.: 5568...)
+
+Clique "Conectar e validar na Meta".
+Depois use "Enviar mensagem de teste".
+
+IMPORTANTE SOBRE MENSAGENS
+--------------------------
+A implementação V5.2 envia para um destinatário individual configurado. Isso permite testar a Cloud API e automatizar a fila sem quebrar o fluxo antigo.
+
+Para disparos iniciados pela empresa fora da janela permitida pelo WhatsApp, normalmente é necessário usar templates aprovados. O projeto ainda não cria/seleciona templates automaticamente.
+
+A tela "Canais & Grupos" foi preservada. A V5.2 NÃO inventa suporte a grupos/canais sem o endpoint/permissão oficial correspondente. Isso será uma etapa separada para evitar quebrar a integração oficial ou violar as regras da Meta.
+
+TESTES FEITOS NESTE PACOTE
+--------------------------
+- app.js passou em node --check (sem erro de sintaxe).
+- index.html verificado sem IDs duplicados.
+- O comportamento assistido anterior foi mantido como fallback.
+- Nenhum token real, PIN, código SMS, service_role ou senha foi inserido nos arquivos.

@@ -1,0 +1,11 @@
+VITRINE BOT AFILIADOS — VERSÃO PRONTA
+
+- Assinatura GustavoBarbosa no topo e rodapé.
+- "Conheça o Bot" agora rola para uma seção explicativa completa.
+- "Entrar no Bot" continua abrindo o painel.
+- Vitrine sem parâmetro abre a loja do Gustavo.
+- Para clientes: use ?loja=UUID para mostrar somente os produtos daquele cliente.
+- Busca e filtros: Todas, Shopee, Mercado Livre e Mais recentes.
+- Compra abre o affiliate_url da oferta.
+- Painel da raiz NÃO foi alterado.
+- A seção "Conheça o Bot" separa claramente o que já funciona do que ainda depende de API/backend.

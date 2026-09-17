@@ -1,0 +1,49 @@
+BOT AFILIADOS PREMIUM V5.3 - INSTAGRAM
+
+O que foi adicionado:
+- Botão Conectar Instagram no painel.
+- Status real do Instagram por usuário.
+- OAuth seguro com state de uso único.
+- Token criptografado no backend.
+- Publicação de ofertas com imagem no Feed.
+- Consumo do limite diário do plano.
+- Histórico de sucesso/erro no post_logs.
+- Renovação automática do long-lived token quando estiver perto do vencimento.
+
+1) SUPABASE SQL
+Execute no SQL Editor:
+  supabase/instagram_v5_3.sql
+
+2) SUPABASE SECRETS
+Crie estes Secrets:
+  INSTAGRAM_APP_ID = ID do produto Instagram do app Meta
+  INSTAGRAM_APP_SECRET = segredo do produto Instagram
+  INSTAGRAM_REDIRECT_URI = https://jhdezfnafhekimolfiuu.supabase.co/functions/v1/instagram-callback
+  INSTAGRAM_TOKEN_ENCRYPTION_KEY = 64 caracteres HEX aleatórios
+  APP_PUBLIC_URL = https://gustavo2025001.github.io/bot-afiliados/
+  META_GRAPH_VERSION = v25.0
+
+Para gerar a chave de criptografia no PowerShell:
+  -join ((1..32 | ForEach-Object { '{0:x2}' -f (Get-Random -Maximum 256) }))
+
+3) META / INSTAGRAM
+Use Instagram API with Instagram Login.
+Conta conectada: Profissional (Business ou Creator).
+Scopes usados:
+  instagram_business_basic
+  instagram_business_content_publish
+
+Cadastre exatamente como OAuth Redirect URI:
+  https://jhdezfnafhekimolfiuu.supabase.co/functions/v1/instagram-callback
+
+4) DEPLOY DAS EDGE FUNCTIONS
+  instagram-auth
+  instagram-callback
+  instagram-status
+  instagram-publish
+
+IMPORTANTE
+- Não coloque INSTAGRAM_APP_SECRET nem tokens no GitHub.
+- A imagem da oferta precisa ser uma URL pública HTTPS.
+- Link na legenda do Instagram normalmente não vira link clicável no Feed; o Bot inclui o link no texto, mas uma estratégia de "link na bio" é melhor para conversão.
+- Para liberar para clientes externos em produção, as permissões do app podem precisar de aprovação da Meta/App Review.

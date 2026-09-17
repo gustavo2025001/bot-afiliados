@@ -1,0 +1,10 @@
+BOT AFILIADOS V5.3.2 - CORRECAO DO CONTADOR
+
+- "Publicadas hoje" nao usa mais o contador de shares/daily_usage.
+- Conta somente post_logs do usuario autenticado.
+- provider = instagram
+- status = success
+- somente registros do dia atual.
+- Erros e tentativas nao aumentam o contador.
+- "Uso hoje" continua separado e representa o consumo do plano.
+- Mantidas as correcoes de usuarios separados, assinatura GustavoBarbosa e Voltar para a Vitrine.

@@ -1,0 +1,7 @@
+BOT AFILIADOS - arquivos PIX
+
+Conteudo:
+- index.html
+- app.js
+
+IMPORTANTE: mantenha no GitHub o style.css e todos os demais arquivos/assets da versao que ja estava funcionando. Este ZIP nao substitui o restante do projeto.

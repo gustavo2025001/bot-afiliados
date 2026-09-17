@@ -1,0 +1,18 @@
+BOT AFILIADOS V5.1.3 - CORREÇÃO FINAL DO STATUS MERCADO LIVRE
+
+O que foi alterado:
+- Somente /app.js da raiz é usado pelo site.
+- Mercado Livre consulta diretamente /functions/v1/mercadolivre-status.
+- A consulta usa cache:no-store e um parâmetro de tempo para evitar cache antigo.
+- Considera conectado quando o backend retorna connected:true OU status:"connected".
+- index.html carrega app.js?v=5.1.3 para forçar atualização.
+
+NÃO foi alterado:
+- OAuth Mercado Livre.
+- Secrets.
+- Callback.
+- Tabela de tokens.
+- Layout V5.1.
+- /js/app.js (fica apenas como cópia antiga/referência).
+
+Depois de enviar os arquivos ao GitHub, espere o Pages publicar e abra o bot novamente.
