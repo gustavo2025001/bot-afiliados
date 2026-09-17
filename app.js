@@ -113,7 +113,7 @@ function renderUsage(){
   const s=state.share;
   const label=s.unlimited?`${s.used} / ILIMITADO`:`${s.used} / ${s.limit??'—'}`;
   const daily=$('dailyUsage'); if(daily)daily.textContent=label;
-  const today=$('todayPostCount'); if(today)today.textContent=s.used;
+  const today=$('todayPostCount'); if(today)today.textContent=Number(state.todaySuccessfulPosts||0);
   const pct=s.unlimited?Math.min(s.used,100):s.limit?Math.min(100,(s.used/s.limit)*100):0;
   const bar=$('usageBar'); if(bar)bar.style.width=pct+'%';
   const help=$('planCardHelp');
@@ -318,7 +318,29 @@ function renderSchedules(){
 $('saveSchedule').onclick=async()=>{if(!requireAccess())return;const campaign_id=$('sCampaign').value,when=$('sWhen').value;if(!campaign_id||!when)return $('sMsg').textContent='Selecione a campanha e a data.';const d=new Date(when);if(d<=new Date())return $('sMsg').textContent='Escolha uma data futura.';const{error}=await sb.from('schedules').insert({user_id:state.user.id,campaign_id,scheduled_for:d.toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Sao_Paulo',status:'pending'});if(error)return $('sMsg').textContent=error.message;closeModal('scheduleModal');$('sWhen').value='';await loadSchedules();toast('Agendamento criado.','ok')};
 window.deleteSchedule=async id=>{if(!confirm('Excluir este agendamento?'))return;const{error}=await sb.from('schedules').delete().eq('id',id);if(error)return toast(error.message,'error');await loadSchedules()};
 
-async function loadPosts(){const{data,error}=await sb.from('post_logs').select('*').order('created_at',{ascending:false}).limit(100);if(error){renderDbError('postList','Histórico',error);return}state.posts=data||[];renderPosts()}
+async function loadPosts(){
+  if(!state.user?.id)return;
+  const{data,error}=await sb.from('post_logs').select('*').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(100);
+  if(error){renderDbError('postList','Histórico',error);return}
+  state.posts=data||[];
+
+  // Publicadas hoje = somente publicacoes REAIS confirmadas com sucesso.
+  // Nao usa daily_usage, tentativas ou erros.
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const end=new Date(start); end.setDate(end.getDate()+1);
+  const{count,error:countError}=await sb.from('post_logs')
+    .select('id',{count:'exact',head:true})
+    .eq('user_id',state.user.id)
+    .eq('provider','instagram')
+    .eq('status','success')
+    .gte('created_at',start.toISOString())
+    .lt('created_at',end.toISOString());
+  state.todaySuccessfulPosts=countError?0:Number(count||0);
+  renderPosts();
+  renderUsage();
+  renderBotV51();
+}
 function renderPosts(){if(!$('postList'))return;$('postList').innerHTML=state.posts.map(p=>`<div class="tableRow"><div><b>${esc(p.provider)}</b><small>${fmtDate(p.created_at)}</small></div><span class="tag">${esc(p.status)}</span><span>${esc(p.response_meta?.title||p.external_id||'—')}</span><span>${esc(p.error_message||'')}</span></div>`).join('')||'<div class="empty">Nenhum compartilhamento registrado.</div>'}
 async function loadIntegrations(){
   const {data,error}=await sb.from('integrations').select('provider,status,updated_at');
@@ -743,7 +765,7 @@ window.adminToggle=async(userId,blocked)=>{
 const BOT_CONFIG_KEY='botAfiliadosV51Config',BOT_ACTIVE_KEY='botAfiliadosV51Active';
 function getBotConfig(){try{return JSON.parse(localStorage.getItem(BOT_CONFIG_KEY))||{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}catch(e){return{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}}
 function botIsActive(){return localStorage.getItem(BOT_ACTIVE_KEY)==='1'}
-function renderBotActivity(){if(!$('botActivity'))return;const rows=(state.posts||[]).slice(0,5);$('botActivity').innerHTML=rows.map(p=>`<div class="activityItem"><b>${esc(p.status==='success'?'Publicado':'Registro')}: ${esc(p.provider||'canal')}</b><span>${p.created_at?new Date(p.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="empty">Nenhuma publicação registrada ainda.</div>'}
+function renderBotActivity(){if(!$('botActivity'))return;const rows=(state.posts||[]).slice(0,5);$('botActivity').innerHTML=rows.map(p=>`<div class="activityItem"><b>${esc(p.status==='success'?'Publicado':'Erro')}: ${esc(p.provider||'canal')}</b><span>${p.created_at?new Date(p.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="empty">Nenhuma publicação registrada ainda.</div>'}
 function renderBotV51(){
   if(!$('botAutoToggle'))return;
   const c=getBotConfig(),active=botIsActive();
@@ -754,10 +776,10 @@ function renderBotV51(){
   setText('sideBotBadge',active?'ATIVO':'PAUSADO');
   setText('sideBotToggle',active?'Ⅱ Pausar Bot':'▶ Ativar Bot');
   setText('botIntervalLabel',c.interval>=60?(c.interval/60)+' hora'+(c.interval>60?'s':''):c.interval+' minutos');
-  setText('botPostsToday',state.share?.used||0);
+  setText('botPostsToday',Number(state.todaySuccessfulPosts||0));
   setText('botOnlineStatus',active?'● Configurado':'● Aguardando');
   setText('botHeadline',active?'Automação configurada 🚀':'Pronto para configurar');
-  setText('botStatusHelp',active?'Preferências salvas. O worker 24h do backend ainda precisa ser ligado.':'Conecte WhatsApp/Instagram e escolha os filtros.');
+  setText('botStatusHelp',active?'Automação ativa no servidor. Publicações confirmadas aparecem no contador.':'Conecte o Instagram e escolha os filtros.');
   setText('nextSearch',active?c.interval+' min':'—');
   setText('channelCount',(state.whatsapp?.connected?1:0)+(state.instagram?.connected?1:0));
   renderBotActivity();
