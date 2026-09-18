@@ -804,7 +804,7 @@ window.adminToggle=async(userId,blocked)=>{
 
 // V5.1 - painel do Bot Automático
 const BOT_CONFIG_KEY='botAfiliadosV51Config',BOT_ACTIVE_KEY='botAfiliadosV51Active';
-function getBotConfig(){try{return JSON.parse(localStorage.getItem(BOT_CONFIG_KEY))||{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}catch(e){return{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}}
+function getBotConfig(){try{return JSON.parse(localStorage.getItem(BOT_CONFIG_KEY))||{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,queueTarget:20,categories:['Geral'],useML:true,useShopee:false,useWhats:true,useInstagram:false}}catch(e){return{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,queueTarget:20,categories:['Geral'],useML:true,useShopee:false,useWhats:true,useInstagram:false}}}
 function botIsActive(){return localStorage.getItem(BOT_ACTIVE_KEY)==='1'}
 function renderBotActivity(){if(!$('botActivity'))return;const rows=(state.posts||[]).slice(0,5);$('botActivity').innerHTML=rows.map(p=>`<div class="activityItem"><b>${esc(p.status==='success'?'Publicado':'Erro')}: ${esc(p.provider||'canal')}</b><span>${p.created_at?new Date(p.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="empty">Nenhuma publicação registrada ainda.</div>'}
 function renderBotV51(){
@@ -873,12 +873,12 @@ async function setBotActive(v){
 }
 if($('botAutoToggle'))$('botAutoToggle').onchange=e=>setBotActive(e.target.checked);
 if($('sideBotToggle'))$('sideBotToggle').onclick=()=>setBotActive(!botIsActive());
-if($('openBotConfig'))$('openBotConfig').onclick=()=>{const c=getBotConfig();$('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;modal('botConfigModal')};
+if($('openBotConfig'))$('openBotConfig').onclick=()=>{const c=getBotConfig();$('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botQueueTarget').value=c.queueTarget||20;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;const selected=new Set(c.categories||['Geral']);document.querySelectorAll('[data-bot-category]').forEach(x=>x.checked=selected.has(x.value));modal('botConfigModal')};
 if($('saveBotConfig'))$('saveBotConfig').onclick=async()=>{
-  const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:false,useInstagram:$('botUseInstagram').checked};
+  const categories=[...document.querySelectorAll('[data-bot-category]:checked')].map(x=>x.value);if(!categories.length)return toast('Escolha pelo menos uma categoria.','error');const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),queueTarget:Math.max(1,Math.min(50,Number($('botQueueTarget').value||20))),categories,useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:false,useInstagram:$('botUseInstagram').checked};
   const btn=$('saveBotConfig');btn.disabled=true;
   try{
-    const payload={user_id:state.user.id,interval_minutes:c.interval,daily_limit:c.dailyLimit,use_mercadolivre:c.useML,use_shopee:c.useShopee,use_whatsapp:false,use_instagram:c.useInstagram,updated_at:new Date().toISOString()};
+    const payload={user_id:state.user.id,interval_minutes:c.interval,daily_limit:c.dailyLimit,min_discount:c.minDiscount,min_price:c.minPrice,max_price:c.maxPrice,queue_target:c.queueTarget,selected_categories:c.categories,use_mercadolivre:c.useML,use_shopee:c.useShopee,use_whatsapp:false,use_instagram:c.useInstagram,updated_at:new Date().toISOString()};
     const {error}=await sb.from('bot_automation_settings').upsert(payload,{onConflict:'user_id'});if(error)throw error;
     localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));closeModal('botConfigModal');renderBotV51();toast('Configurações salvas na sua conta.','ok');
   }catch(e){toast('Não foi possível salvar no backend: '+(e?.message||String(e)),'error');}
