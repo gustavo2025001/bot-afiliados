@@ -5,7 +5,7 @@ const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
-const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false,verified_name:null,phone_mask:null,has_default_recipient:false},instagram:{connected:false,username:null,account_type:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},previewId:null};
+const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false},instagram:{connected:false,username:null,account_type:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},todayClicks:0,previewId:null};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
@@ -14,6 +14,23 @@ const modal=id=>$(id)?.classList.remove('hidden');
 const closeModal=id=>$(id)?.classList.add('hidden');
 const ADMIN_EMAIL='gustavodepaulabarbosag@gmail.com';
 const ADMIN_USER_ID='b1fa7a00-02fe-4c7c-b2a5-3873eee3f5d1';
+
+const SOUND_KEY='botAfiliadosSoundEnabled';
+const soundEnabled=()=>localStorage.getItem(SOUND_KEY)!=='0';
+function playUiSound(kind='ok'){
+  if(!soundEnabled())return;
+  try{
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    const ctx=new C(),osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);osc.type='sine';
+    osc.frequency.value=kind==='publish'?880:kind==='activate'?660:520;
+    gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.08,ctx.currentTime+.015);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.18);
+    osc.start();osc.stop(ctx.currentTime+.2);
+  }catch(e){}
+}
+function updateSoundButton(){const b=$('toggleSoundHelp');if(b)b.textContent='Som: '+(soundEnabled()?'ligado':'desligado');}
+document.addEventListener('click',e=>{if(e.target?.id==='toggleSoundHelp'){localStorage.setItem(SOUND_KEY,soundEnabled()?'0':'1');updateSoundButton();if(soundEnabled())playUiSound('ok');}});
+
 
 const isAdmin=()=>{
   const email=String(state.user?.email||'').trim().toLowerCase();
@@ -62,7 +79,8 @@ async function boot(user){
     loadSchedules(),
     loadPosts(),
     loadIntegrations(),
-    loadShareStatus()
+    loadShareStatus(),
+    loadTodayClicks()
   ]);
 
   // Inicia a escuta em tempo real somente depois da carga inicial.
@@ -108,12 +126,21 @@ function requireAccess(){if(hasAccess())return true;toast('Assinatura ativa nece
 function showView(name){if(['offers','products','queue','campaigns','schedules','integrations','channels','reports'].includes(name)&&!requireAccess())return;if(name==='admin'&&!isAdmin())return toast('Acesso administrativo negado.','error');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('view-'+name)?.classList.add('active');document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===name));if(name==='queue')renderQueue();if(name==='offers')renderOffers()}
 document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>showView(btn.dataset.view));document.querySelectorAll('[data-view-jump]').forEach(btn=>btn.onclick=()=>showView(btn.dataset.viewJump));document.querySelectorAll('[data-open-plans]').forEach(btn=>btn.onclick=()=>showView('plans'));document.querySelectorAll('.closeModal').forEach(btn=>btn.onclick=()=>closeModal(btn.dataset.modal));
 
+async function loadTodayClicks(){
+  if(!state.user?.id)return;
+  const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()),end=new Date(start);end.setDate(end.getDate()+1);
+  const {count,error}=await sb.from('store_clicks').select('id',{count:'exact',head:true}).eq('user_id',state.user.id).gte('created_at',start.toISOString()).lt('created_at',end.toISOString());
+  state.todayClicks=error?0:Number(count||0);
+  const el=$('todayClickCount');if(el)el.textContent=state.todayClicks;
+}
+
 async function loadShareStatus(){const{data,error}=await sb.rpc('get_share_status');if(error){state.share={used:0,limit:null,unlimited:isAdmin(),allowed:hasAccess(),plan:isAdmin()?'admin':null};return}const r=Array.isArray(data)?data[0]:data;if(r)state.share={used:Number(r.used||0),limit:r.daily_limit==null?null:Number(r.daily_limit),unlimited:!!r.unlimited,allowed:!!r.allowed,plan:r.plan_code};renderUsage()}
 function renderUsage(){
   const s=state.share;
   const label=s.unlimited?`${s.used} / ILIMITADO`:`${s.used} / ${s.limit??'—'}`;
   const daily=$('dailyUsage'); if(daily)daily.textContent=label;
   const today=$('todayPostCount'); if(today)today.textContent=Number(state.todaySuccessfulPosts||0);
+  const clicks=$('todayClickCount');if(clicks)clicks.textContent=Number(state.todayClicks||0);
   const pct=s.unlimited?Math.min(s.used,100):s.limit?Math.min(100,(s.used/s.limit)*100):0;
   const bar=$('usageBar'); if(bar)bar.style.width=pct+'%';
   const help=$('planCardHelp');
@@ -380,7 +407,12 @@ async function loadIntegrations(){
   const dashShopee=$('dashShopeeStatus');
   if(dashShopee)dashShopee.textContent=shopeeConnected?'Conectada':'Pendente';
 
-  // WHATSAPP CLOUD API: o status real vem da Edge Function e nunca expõe o token.
+  // WHATSAPP: temporariamente desativado no produto. Mantemos o backend antigo sem expor ao cliente.
+  state.whatsapp={connected:false};
+  ['waStatus','waStatus2'].forEach(id=>{const el=$(id);if(el){el.textContent='EM BREVE';el.classList.remove('connectedStatus');}});
+  const dashWaSoon=$('dashWaStatus');if(dashWaSoon)dashWaSoon.textContent='Em breve';
+
+  /* WHATSAPP CLOUD API LEGADO (oculto da interface):
   let waConnected=false;
   try{
     const {data:{session}}=await sb.auth.getSession();
@@ -410,6 +442,8 @@ async function loadIntegrations(){
     btn.textContent=waConnected?'Gerenciar API':'Conectar API';
     btn.disabled=false;
   });
+
+  */
 
   // INSTAGRAM: status real vem do backend por usuário. O navegador nunca recebe o token.
   const igParams=new URLSearchParams(location.search);
@@ -682,12 +716,16 @@ async function loadAdmin(){
     {data:users,error:ue},
     {data:errors},
     {count:postCount},
-    {count:activeSubs}
+    {count:activeSubs},
+    {count:successPosts},
+    {count:pendingQueue}
   ]=await Promise.all([
     sb.rpc('admin_list_users'),
     sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(50),
     sb.from('post_logs').select('*',{count:'exact',head:true}),
-    sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active')
+    sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active'),
+    sb.from('post_logs').select('*',{count:'exact',head:true}).eq('status','success'),
+    sb.from('post_queue').select('*',{count:'exact',head:true}).eq('status','pending')
   ]);
 
   if(ue)return toast('Admin SQL incompleto: '+ue.message,'error');
@@ -697,6 +735,9 @@ async function loadAdmin(){
   $('adminActiveSubs').textContent=activeSubs||0;
   $('adminPosts').textContent=postCount||0;
   $('adminErrors').textContent=(errors||[]).length;
+  if($('adminSuccessPosts'))$('adminSuccessPosts').textContent=successPosts||0;
+  if($('adminPendingQueue'))$('adminPendingQueue').textContent=pendingQueue||0;
+  if($('adminSystemHealth'))$('adminSystemHealth').innerHTML=`<div class="tableRow"><div><b>Instagram</b><small>Publicação automática</small></div><span class="tag">ATIVO</span><span>${successPosts||0} sucessos</span><span></span></div><div class="tableRow"><div><b>Fila</b><small>Itens aguardando processamento</small></div><span class="tag">${pendingQueue||0} pendentes</span><span></span><span></span></div><div class="tableRow"><div><b>WhatsApp / Facebook / Telegram</b><small>Recursos futuros</small></div><span class="tag">EM DESENVOLVIMENTO</span><span></span><span></span></div>`;
 
   $('adminUserList').innerHTML=arr.map(u=>`
     <div class="tableRow">
@@ -781,7 +822,7 @@ function renderBotV51(){
   setText('botHeadline',active?'Automação configurada 🚀':'Pronto para configurar');
   setText('botStatusHelp',active?'Automação ativa no servidor. Publicações confirmadas aparecem no contador.':'Conecte o Instagram e escolha os filtros.');
   setText('nextSearch',active?c.interval+' min':'—');
-  setText('channelCount',(state.whatsapp?.connected?1:0)+(state.instagram?.connected?1:0));
+  setText('channelCount',(state.instagram?.connected?1:0));
   renderBotActivity();
 }
 
@@ -818,6 +859,7 @@ async function setBotActive(v){
     localStorage.setItem(BOT_ACTIVE_KEY,active?'1':'0');
     renderBotV51();
     toast(active?'Bot Automático ativado no servidor.':'Bot Automático pausado.','ok');
+    if(active)playUiSound('activate');
   }catch(e){
     console.error('Erro ao alterar Bot Automático:',e);
     localStorage.setItem(BOT_ACTIVE_KEY,'0');
@@ -831,8 +873,17 @@ async function setBotActive(v){
 }
 if($('botAutoToggle'))$('botAutoToggle').onchange=e=>setBotActive(e.target.checked);
 if($('sideBotToggle'))$('sideBotToggle').onclick=()=>setBotActive(!botIsActive());
-if($('openBotConfig'))$('openBotConfig').onclick=()=>{const c=getBotConfig();$('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=!!c.useWhats;$('botUseInstagram').checked=!!c.useInstagram;modal('botConfigModal')};
-if($('saveBotConfig'))$('saveBotConfig').onclick=()=>{const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:$('botUseWhats').checked,useInstagram:$('botUseInstagram').checked};localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));closeModal('botConfigModal');renderBotV51();toast('Configurações do Bot salvas.','ok')};
+if($('openBotConfig'))$('openBotConfig').onclick=()=>{const c=getBotConfig();$('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;modal('botConfigModal')};
+if($('saveBotConfig'))$('saveBotConfig').onclick=async()=>{
+  const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:false,useInstagram:$('botUseInstagram').checked};
+  const btn=$('saveBotConfig');btn.disabled=true;
+  try{
+    const payload={user_id:state.user.id,interval_minutes:c.interval,daily_limit:c.dailyLimit,use_mercadolivre:c.useML,use_shopee:c.useShopee,use_whatsapp:false,use_instagram:c.useInstagram,updated_at:new Date().toISOString()};
+    const {error}=await sb.from('bot_automation_settings').upsert(payload,{onConflict:'user_id'});if(error)throw error;
+    localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));closeModal('botConfigModal');renderBotV51();toast('Configurações salvas na sua conta.','ok');
+  }catch(e){toast('Não foi possível salvar no backend: '+(e?.message||String(e)),'error');}
+  finally{btn.disabled=false;}
+};
 if($('quickCampaign'))$('quickCampaign').onclick=()=>{if(!requireAccess())return;fillCampaignProducts();modal('campaignModal')};
 document.querySelectorAll('.channelSoon').forEach(btn=>btn.onclick=()=>toast('Canal preparado no painel. A integração oficial será ligada no backend.','ok'));
 
@@ -842,3 +893,5 @@ sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){state.user=
 // Premium Dashboard bridge: visual shortcuts reuse existing bot controls.
 document.getElementById('setupOpenConfig')?.addEventListener('click',()=>document.getElementById('openBotConfig')?.click());
 document.getElementById('setupActivateBot')?.addEventListener('click',()=>document.getElementById('sideBotToggle')?.click());
+
+updateSoundButton();
