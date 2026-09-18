@@ -873,13 +873,25 @@ async function setBotActive(v){
 }
 if($('botAutoToggle'))$('botAutoToggle').onchange=e=>setBotActive(e.target.checked);
 if($('sideBotToggle'))$('sideBotToggle').onclick=()=>setBotActive(!botIsActive());
-if($('openBotConfig'))$('openBotConfig').onclick=()=>{const c=getBotConfig();$('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botQueueTarget').value=c.queueTarget||20;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;const selected=new Set(c.categories||['Geral']);document.querySelectorAll('[data-bot-category]').forEach(x=>x.checked=selected.has(x.value));modal('botConfigModal')};
+if($('openBotConfig'))$('openBotConfig').onclick=async()=>{
+  let c=getBotConfig();
+  try{
+    const {data,error}=await sb.from('bot_automation_settings').select('interval_minutes,min_discount,min_price,max_price,daily_limit,queue_target,selected_categories,use_mercadolivre,use_shopee,use_instagram').eq('user_id',state.user.id).maybeSingle();
+    if(error)throw error;
+    if(data){
+      c={interval:Number(data.interval_minutes??15),minDiscount:Number(data.min_discount??20),minPrice:Number(data.min_price??0),maxPrice:Number(data.max_price??10000),dailyLimit:Number(data.daily_limit??30),queueTarget:Number(data.queue_target??20),categories:Array.isArray(data.selected_categories)?data.selected_categories:['Geral'],useML:data.use_mercadolivre===true,useShopee:data.use_shopee===true,useWhats:false,useInstagram:data.use_instagram===true};
+      localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));
+    }
+  }catch(e){console.warn('Configuração backend indisponível; usando cache local.',e);}
+  $('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botQueueTarget').value=c.queueTarget||20;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;const selected=new Set(c.categories||['Geral']);document.querySelectorAll('[data-bot-category]').forEach(x=>x.checked=selected.has(x.value));modal('botConfigModal');
+};
 if($('saveBotConfig'))$('saveBotConfig').onclick=async()=>{
   const categories=[...document.querySelectorAll('[data-bot-category]:checked')].map(x=>x.value);if(!categories.length)return toast('Escolha pelo menos uma categoria.','error');const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),queueTarget:Math.max(1,Math.min(50,Number($('botQueueTarget').value||20))),categories,useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:false,useInstagram:$('botUseInstagram').checked};
   const btn=$('saveBotConfig');btn.disabled=true;
   try{
     const payload={user_id:state.user.id,interval_minutes:c.interval,daily_limit:c.dailyLimit,min_discount:c.minDiscount,min_price:c.minPrice,max_price:c.maxPrice,queue_target:c.queueTarget,selected_categories:c.categories,use_mercadolivre:c.useML,use_shopee:c.useShopee,use_whatsapp:false,use_instagram:c.useInstagram,updated_at:new Date().toISOString()};
-    const {error}=await sb.from('bot_automation_settings').upsert(payload,{onConflict:'user_id'});if(error)throw error;
+    const {data:saved,error}=await sb.from('bot_automation_settings').upsert(payload,{onConflict:'user_id'}).select('queue_target,selected_categories').single();if(error)throw error;
+    c.queueTarget=Number(saved?.queue_target??c.queueTarget);c.categories=Array.isArray(saved?.selected_categories)?saved.selected_categories:c.categories;
     localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));closeModal('botConfigModal');renderBotV51();toast('Configurações salvas na sua conta.','ok');
   }catch(e){toast('Não foi possível salvar no backend: '+(e?.message||String(e)),'error');}
   finally{btn.disabled=false;}
