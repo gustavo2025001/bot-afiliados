@@ -28,3 +28,30 @@
 .soonCard{opacity:.82}.soonCard button:disabled{cursor:not-allowed;opacity:.7}.soonCard b{color:#f0b64b}.disabledCheck{opacity:.6}
 
 .categoryPicker{margin-top:16px;padding:15px;border:1px solid #343954;border-radius:13px;background:#0b0e19}.categoryPicker>b,.categoryPicker>small{display:block}.categoryPicker>small{color:var(--muted);margin-top:4px}.categoryChecks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.categoryChecks label{display:flex;align-items:center;gap:7px;margin:0;padding:10px;border:1px solid #2d324a;border-radius:9px;background:#101424}.categoryChecks input{width:auto;margin:0}@media(max-width:700px){.categoryChecks{grid-template-columns:1fr 1fr}}
+
+/* V8 - Identidade visual Opção 5: Bot Afiliados Premium.
+   Somente aparência: todos os números e status continuam vindo do sistema real. */
+#panel{isolation:isolate;background:radial-gradient(circle at 78% 12%,rgba(121,42,255,.22),transparent 27%),radial-gradient(circle at 17% 74%,rgba(0,174,255,.13),transparent 30%),linear-gradient(145deg,#050814 0%,#080d1b 45%,#070916 100%)!important}
+#panel:before{content:"";position:fixed;z-index:-2;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 0 55%,rgba(5,8,20,.18)),radial-gradient(circle at 90% 72%,rgba(238,35,255,.10),transparent 18%)}
+#panel:after{z-index:-1!important;opacity:.34!important;background-image:linear-gradient(rgba(83,104,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(83,104,255,.045) 1px,transparent 1px)!important;background-size:46px 46px!important}
+.sidebar{background:linear-gradient(180deg,rgba(6,10,23,.98),rgba(7,10,20,.97));box-shadow:14px 0 45px rgba(0,0,0,.18)}
+.main{position:relative}.main:before{content:"";position:fixed;z-index:-1;right:-2vw;bottom:0;width:46vw;height:32vh;pointer-events:none;opacity:.24;background:linear-gradient(90deg,transparent 0 6%,#121a31 6% 10%,transparent 10% 15%,#111a2e 15% 22%,transparent 22% 28%,#121c33 28% 35%,transparent 35% 41%,#111a30 41% 50%,transparent 50% 57%,#131d35 57% 67%,transparent 67% 73%,#111a2e 73% 83%,transparent 83%);filter:drop-shadow(0 -12px 24px rgba(107,48,255,.16))}
+.panelCard,.kpis article{background:linear-gradient(180deg,rgba(15,23,43,.91),rgba(8,13,27,.94))!important;border-color:rgba(83,102,161,.35)!important;box-shadow:0 18px 55px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.025)}
+.panelCard:hover{border-color:rgba(120,82,255,.46)!important}.topbar{padding:8px 0 12px}.eyebrow,.sectionKicker{color:#7ecbff}.primary{background:linear-gradient(90deg,#3f6cff,#6d43ff 52%,#9b2dff);box-shadow:0 10px 30px rgba(83,65,255,.18)}
+.nav:hover,.nav.active{background:linear-gradient(90deg,rgba(76,78,255,.9),rgba(137,31,232,.9));box-shadow:0 10px 28px rgba(91,43,218,.26)}
+.creatorSignature{border-color:rgba(126,74,255,.55);background:linear-gradient(135deg,rgba(35,16,69,.92),rgba(9,18,38,.92))}.storefrontBack{border-color:rgba(65,125,255,.55);background:linear-gradient(90deg,rgba(22,39,81,.9),rgba(39,22,75,.9));color:#dce8ff}.storefrontBack:hover{border-color:#7a6cff;background:linear-gradient(90deg,#172d5a,#34185d)}
+.premiumDashboard .setupHero{background:linear-gradient(110deg,rgba(16,26,52,.95),rgba(28,14,55,.92))!important}.botOrb{filter:drop-shadow(0 0 18px rgba(65,185,255,.30))}.safeData{background:linear-gradient(90deg,rgba(8,35,31,.88),rgba(9,24,35,.88))}
+@media(max-width:720px){.main:before{display:none}}
+
+/* V8.1 CORREÇÃO — OPÇÃO 5 VISÍVEL + VITRINE + ASSINATURA */
+#panel{background-image:linear-gradient(rgba(3,7,18,.72),rgba(3,7,18,.82)),url('assets/opcao5-bg.svg')!important;background-size:cover!important;background-position:center top!important;background-attachment:fixed!important}
+#panel:before{background:radial-gradient(circle at 78% 16%,rgba(35,201,255,.12),transparent 24%),radial-gradient(circle at 18% 76%,rgba(185,44,255,.14),transparent 28%)!important}
+.authShell{background-image:linear-gradient(rgba(3,7,18,.72),rgba(3,7,18,.88)),url('assets/opcao5-bg.svg');background-size:cover;background-position:center;background-attachment:fixed}
+.hero{background:linear-gradient(145deg,rgba(9,11,22,.80),rgba(7,8,17,.72))!important;backdrop-filter:blur(3px)}
+.authContent{background:rgba(3,7,18,.22)}
+.vitrineNav{display:flex!important;align-items:center;gap:7px;text-decoration:none;position:relative;border:1px solid rgba(61,140,255,.34)!important;background:linear-gradient(90deg,rgba(22,47,98,.46),rgba(82,27,127,.35))!important}.vitrineNav:hover{border-color:#6b70ff!important;box-shadow:0 8px 25px rgba(77,67,255,.22)}
+.vitrineNav .newBadge{margin-left:auto;font-size:7px;padding:3px 6px;border-radius:999px;background:#0b8f55;color:#caffdf}
+.sidebar{background:linear-gradient(180deg,rgba(4,8,19,.96),rgba(5,8,17,.94))!important;backdrop-filter:blur(12px)}
+.main{background:linear-gradient(90deg,rgba(3,7,18,.10),rgba(3,7,18,.28))}
+@media(max-width:900px){#panel,.authShell{background-attachment:scroll!important;background-position:62% top!important}}
+.panelCreatorFooter{margin-top:26px;padding:18px 20px;display:flex;align-items:center;gap:16px;border:1px solid rgba(83,102,161,.35);border-radius:16px;background:rgba(5,10,24,.78);backdrop-filter:blur(10px)}.panelCreatorFooter img{width:150px;height:38px;object-fit:contain}.panelCreatorFooter span{font-size:9px;letter-spacing:1.4px;color:#8da3c9}.panelCreatorFooter a{margin-left:auto;color:#76cfff;text-decoration:none;font-size:10px;font-weight:900;letter-spacing:.8px}@media(max-width:700px){.panelCreatorFooter{flex-direction:column;text-align:center}.panelCreatorFooter a{margin-left:0}}

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#030712"/><stop offset=".48" stop-color="#07132a"/><stop offset="1" stop-color="#120523"/></linearGradient>
+ <radialGradient id="g1"><stop stop-color="#246bff" stop-opacity=".55"/><stop offset="1" stop-color="#246bff" stop-opacity="0"/></radialGradient>
+ <radialGradient id="g2"><stop stop-color="#a22dff" stop-opacity=".5"/><stop offset="1" stop-color="#a22dff" stop-opacity="0"/></radialGradient>
+ <linearGradient id="neon" x1="0" x2="1"><stop stop-color="#23c9ff"/><stop offset=".5" stop-color="#6756ff"/><stop offset="1" stop-color="#d12cff"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1920" height="1080" fill="url(#bg)"/>
+<ellipse cx="1510" cy="250" rx="570" ry="480" fill="url(#g1)" opacity=".42"/>
+<ellipse cx="360" cy="820" rx="580" ry="420" fill="url(#g2)" opacity=".36"/>
+<g opacity=".16" stroke="#59a7ff" stroke-width="1"><path d="M0 180H1920M0 360H1920M0 540H1920M0 720H1920M0 900H1920"/><path d="M240 0V1080M480 0V1080M720 0V1080M960 0V1080M1200 0V1080M1440 0V1080M1680 0V1080"/></g>
+<!-- futuristic skyline -->
+<g opacity=".55" fill="#071126" stroke="#1e4e8f" stroke-width="2">
+ <path d="M930 850V600h75v250M1015 850V510h92v340M1120 850V650h68v200M1200 850V420h105v430M1320 850V570h72v280M1400 850V480h90v370M1500 850V620h75v230M1590 850V540h110v310M1715 850V660h80v190M1810 850V500h110v350"/>
+</g>
+<g stroke="url(#neon)" stroke-width="3" opacity=".58" filter="url(#glow)"><path d="M1250 420v-70M1450 480v-90M1865 500v-110"/><path d="M980 650h18M1040 590h22M1230 530h28M1430 620h24M1640 590h28M1850 620h28"/></g>
+<!-- abstract bot mascot -->
+<g transform="translate(1540 210)" filter="url(#glow)" opacity=".5">
+ <rect x="0" y="40" width="230" height="180" rx="72" fill="#08152b" stroke="url(#neon)" stroke-width="8"/>
+ <rect x="34" y="75" width="162" height="100" rx="45" fill="#061020" stroke="#2b75d8" stroke-width="3"/>
+ <circle cx="82" cy="125" r="17" fill="#29dcff"/><circle cx="150" cy="125" r="17" fill="#29dcff"/>
+ <path d="M115 40V8" stroke="#43cfff" stroke-width="7"/><circle cx="115" cy="0" r="10" fill="#b44cff"/>
+</g>
+<path d="M0 910 C420 810 650 1030 1040 900 S1600 820 1920 930V1080H0Z" fill="#050814" opacity=".9"/>
+<path d="M0 920 C420 820 650 1040 1040 910 S1600 830 1920 940" fill="none" stroke="url(#neon)" stroke-width="3" opacity=".4" filter="url(#glow)"/>
+</svg>
