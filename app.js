@@ -326,32 +326,125 @@ window.publishInstagram = async id => {
 
 async function syncOffers(){
   if(!requireAccess())return;
+
   const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);
   btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});
+
   try{
-    const {data:{session}}=await sb.auth.getSession();
+    const {data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError)throw sessionError;
     if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+
     const selected=$('offerPlatform')?.value||'all';
+
+    const callProvider=async(provider)=>{
+      const endpoint=provider==='mercadolivre'
+        ? 'fetch-mercadolivre-offers'
+        : 'fetch-offers';
+
+      const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':`Bearer ${session.access_token}`,
+          'apikey':SUPABASE_ANON_KEY
+        },
+        body:JSON.stringify({provider})
+      });
+
+      const data=await r.json().catch(()=>({}));
+
+      if(!r.ok||data.success===false){
+        throw new Error(
+          `${provider==='mercadolivre'?'Mercado Livre':'Shopee'}: ${
+            data.error||
+            data.message||
+            `Erro HTTP ${r.status}`
+          }`
+        );
+      }
+
+      const count=Number(
+        data.count ??
+        data.imported ??
+        data.offers?.length ??
+        0
+      );
+
+      return {provider,count,data};
+    };
+
     let providers=[];
-    if(selected==='shopee')providers=['shopee'];
-    else if(selected==='mercadolivre')providers=['mercadolivre'];
-    else{
+
+    if(selected==='shopee'){
+      if(!state.shopee?.connected)throw new Error('A Shopee não está conectada nesta conta.');
+      providers=['shopee'];
+    }else if(selected==='mercadolivre'){
+      if(!state.mercadolivre?.connected)throw new Error('O Mercado Livre não está conectado nesta conta.');
+      providers=['mercadolivre'];
+    }else{
       if(state.shopee?.connected)providers.push('shopee');
       if(state.mercadolivre?.connected)providers.push('mercadolivre');
     }
-    if(!providers.length)throw new Error('Conecte a Shopee ou o Mercado Livre antes de buscar ofertas.');
-    if(providers.includes('shopee')&&!state.shopee?.connected)throw new Error('A Shopee não está conectada nesta conta.');
-    if(providers.includes('mercadolivre')&&!state.mercadolivre?.connected)throw new Error('O Mercado Livre não está conectado nesta conta.');
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},body:JSON.stringify({providers})});
-    const data=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(data.error||'A busca automática desta plataforma ainda não está configurada no backend.');
-    if(data.imported)toast(`${data.imported} oferta(s) importada(s) de ${providers.join(' + ')}.`,'ok');
-    else toast(`Busca concluída: ${providers.join(' + ')}.`,'ok');
+
+    if(!providers.length){
+      throw new Error('Conecte a Shopee ou o Mercado Livre antes de buscar ofertas.');
+    }
+
+    // Cada plataforma chama sua própria Edge Function.
+    // Uma falha não mistura credenciais nem produtos com a outra.
+    const results=[];
+    const failures=[];
+
+    for(const provider of providers){
+      try{
+        results.push(await callProvider(provider));
+      }catch(error){
+        failures.push({
+          provider,
+          message:error?.message||String(error)
+        });
+      }
+    }
+
+    const total=results.reduce((sum,item)=>sum+Number(item.count||0),0);
+
     await loadProducts();
-  }catch(e){toast((e?.message||String(e))+' Você ainda pode adicionar ofertas manualmente.','error')}
-  finally{btns.forEach(b=>{b.disabled=false;b.textContent='↻ Buscar ofertas'})}
+
+    if(results.length&&failures.length===0){
+      const nomes=results.map(x=>x.provider==='mercadolivre'?'Mercado Livre':'Shopee').join(' + ');
+      toast(`${total} oferta(s) atualizada(s) em ${nomes}.`,'ok');
+      return;
+    }
+
+    if(results.length&&failures.length){
+      const okNames=results.map(x=>x.provider==='mercadolivre'?'Mercado Livre':'Shopee').join(' + ');
+      const failText=failures.map(x=>x.message).join(' | ');
+      toast(`${total} oferta(s) atualizada(s) em ${okNames}. Atenção: ${failText}`,'error');
+      return;
+    }
+
+    throw new Error(
+      failures.map(x=>x.message).join(' | ')||
+      'Não foi possível buscar ofertas.'
+    );
+
+  }catch(e){
+    toast(
+      (e?.message||String(e))+
+      ' Você ainda pode adicionar ofertas manualmente.',
+      'error'
+    );
+  }finally{
+    btns.forEach(b=>{
+      b.disabled=false;
+      b.textContent='↻ Buscar ofertas';
+    });
+  }
 }
-$('syncOffers').onclick=syncOffers;$('syncOffers2').onclick=syncOffers;
+
+$('syncOffers').onclick=syncOffers;
+$('syncOffers2').onclick=syncOffers;
 
 function fillCampaignProducts(){$('cProduct').innerHTML='<option value="">Sem produto</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}
 $('newCampaign').onclick=()=>{if(!requireAccess())return;fillCampaignProducts();modal('campaignModal')};$('cProduct').onchange=()=>{const p=state.products.find(x=>x.id===$('cProduct').value);if(p&&!$('cMessage').value.trim())$('cMessage').value=adMessage(p)};
