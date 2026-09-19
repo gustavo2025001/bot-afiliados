@@ -5,7 +5,7 @@ const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
-const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false},instagram:{connected:false,username:null,account_type:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},todayClicks:0,previewId:null};
+const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false},instagram:{connected:false,username:null,account_type:null},shopee:{connected:false},mercadolivre:{connected:false,ml_user_id:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},todayClicks:0,previewId:null};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
@@ -196,6 +196,7 @@ function renderProducts(){if(!$('productList'))return;$('offerCount').textConten
 function filteredOffers(){const q=($('offerSearch')?.value||'').toLowerCase(),plat=$('offerPlatform')?.value||'all',f=$('offerFilter')?.value||'all';return state.products.filter(p=>(!q||[p.title,p.category,p.platform].join(' ').toLowerCase().includes(q))&&(plat==='all'||p.platform===plat)&&(f==='all'||f==='queue'&&p.queued||f==='favorite'&&p.favorite))}
 function renderOffers(){if(!$('offerGrid'))return;const list=filteredOffers();$('offerGrid').innerHTML=list.map(p=>`<article class="offerCard"><div class="offerImage">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.title)}" loading="lazy">`:'🛍️'}</div><div class="offerBody"><div class="offerTop"><span class="platformTag">${esc(p.platform).toUpperCase()}</span>${p.discount_percent?`<span class="discountTag">-${p.discount_percent}%</span>`:''}</div><h3>${esc(p.title)}</h3>${Number(p.old_price)>Number(p.price)?`<div class="oldPrice">${money(p.old_price)}</div>`:''}<div class="price">${money(p.price)}</div><div class="offerActions"><button class="${p.queued?'queueActive':''}" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Na fila':'+ Fila'}</button><button onclick="favoriteProduct('${p.id}',${!p.favorite})">${p.favorite?'♥ Favorito':'♡ Favoritar'}</button><button onclick="selectPreview('${p.id}')">👁 Prévia</button><button onclick="shareWhatsApp('${p.id}')">🟢 WhatsApp</button><button onclick="publishInstagram('${p.id}')">📸 Instagram</button></div></div></article>`).join('')||'<div class="empty">Nenhuma oferta encontrada.</div>'}
 ['offerSearch','offerPlatform','offerFilter'].forEach(id=>$(id)?.addEventListener(id==='offerSearch'?'input':'change',renderOffers));
+$('queuePlatform')?.addEventListener('change',renderQueue);
 $('saveProduct').onclick=async()=>{if(!requireAccess())return;const title=$('pTitle').value.trim(),link=$('pLink').value.trim();if(!title||!link)return $('pMsg').textContent='Preencha título e link.';$('pMsg').textContent='Salvando...';const num=id=>Number(String($(id).value||'0').replace(/\./g,'').replace(',','.'))||0;const payload={user_id:state.user.id,title,price:num('pPrice'),old_price:num('pOldPrice'),discount_percent:Number($('pDiscount').value)||0,platform:$('pPlatform').value,affiliate_url:link,image_url:$('pImage').value.trim()||null,category:$('pCategory').value.trim()||'Geral',source:'manual'};const{error}=await sb.from('products').insert(payload);if(error)return $('pMsg').textContent=error.message;closeModal('productModal');await loadProducts();toast('Oferta salva no Supabase.','ok')};
 window.deleteProduct=async id=>{if(!requireAccess())return;if(!confirm('Excluir este produto?'))return;const{error}=await sb.from('products').delete().eq('id',id).eq('user_id',state.user.id);if(error)return toast(error.message,'error');await loadProducts();toast('Produto excluído.','ok')};
 window.queueProduct=async(id,on)=>{if(!requireAccess())return;const{error}=await sb.rpc('toggle_product_queue',{target_product:id,put_in_queue:on});if(error)return toast(error.message,'error');const p=state.products.find(x=>x.id===id);if(p)p.queued=on;renderProducts();renderOffers();renderQueue()};
@@ -203,7 +204,17 @@ window.favoriteProduct=async(id,on)=>{const{error}=await sb.rpc('toggle_product_
 
 function adMessage(p){const old=Number(p.old_price)>Number(p.price)?`💸 De: ${money(p.old_price)}\n`:'';const disc=p.discount_percent?`🔥 ${p.discount_percent}% OFF\n`:'';return `🔥 OFERTA ${String(p.platform||'').toUpperCase()} 🔥\n\n🛍️ ${p.title}\n${old}💰 Por: ${money(p.price)}\n${disc}\n🛒 Confira agora:\n${p.affiliate_url}`}
 window.selectPreview=id=>{state.previewId=id;renderPreview();showView('queue')};
-function renderQueue(){if(!$('queueList'))return;const q=state.products.filter(x=>x.queued);$('queueCount').textContent=q.length;$('queueList').innerHTML=q.map((p,i)=>`<div class="tableRow"><div><b>${String(i+1).padStart(2,'0')} • ${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><span class="tag">NA FILA</span><span>${p.discount_percent?'-'+p.discount_percent+'%':'Oferta'}</span><div class="rowActions"><button class="iconBtn" onclick="selectPreview('${p.id}')">Prévia</button><button class="dangerBtn" onclick="queueProduct('${p.id}',false)">Remover</button></div></div>`).join('')||'<div class="empty">Fila vazia. Adicione ofertas na página Ofertas.</div>';if(!state.previewId&&q[0])state.previewId=q[0].id;if(state.previewId&&!state.products.some(x=>x.id===state.previewId))state.previewId=q[0]?.id||null;renderPreview()}
+function renderQueue(){
+  if(!$('queueList'))return;
+  const platform=$('queuePlatform')?.value||'all';
+  const allQueued=state.products.filter(x=>x.queued);
+  const q=allQueued.filter(p=>platform==='all'||p.platform===platform);
+  $('queueCount').textContent=allQueued.length;
+  $('queueList').innerHTML=q.map((p,i)=>`<div class="tableRow"><div><b>${String(i+1).padStart(2,'0')} • ${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><span class="tag">${esc(p.platform).toUpperCase()}</span><span>${p.discount_percent?'-'+p.discount_percent+'%':'Oferta'}</span><div class="rowActions"><button class="iconBtn" onclick="selectPreview('${p.id}')">Prévia</button><button class="dangerBtn" onclick="queueProduct('${p.id}',false)">Remover</button></div></div>`).join('')||'<div class="empty">Nenhum item desta plataforma na fila.</div>';
+  if(!state.previewId&&q[0])state.previewId=q[0].id;
+  if(state.previewId&&!q.some(x=>x.id===state.previewId))state.previewId=q[0]?.id||null;
+  renderPreview();
+}
 function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;if($('previewInstagram'))$('previewInstagram').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;if($('previewInstagram'))$('previewInstagram').disabled=false;$('previewCopy').disabled=false}
 $('previewCopy').onclick=async()=>{const p=state.products.find(x=>x.id===state.previewId);if(!p)return;await navigator.clipboard.writeText(adMessage(p));toast('Mensagem copiada.','ok')};
 $('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const p=state.products.find(x=>x.queued);if(!p)return toast('A fila está vazia.','error');shareWhatsApp(p.id)};
@@ -313,7 +324,33 @@ window.publishInstagram = async id => {
   }
 };
 
-async function syncOffers(){if(!requireAccess())return;const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({providers:['shopee','mercadolivre']})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Integração de ofertas ainda não configurada.');if(data.imported)toast(`${data.imported} oferta(s) importada(s).`,'ok');await loadProducts()}catch(e){toast(e.message+' Você ainda pode adicionar ofertas manualmente.','error')}finally{btns.forEach((b,i)=>{b.disabled=false;b.textContent=i?'↻ Buscar ofertas':'↻ Buscar ofertas'})}}
+async function syncOffers(){
+  if(!requireAccess())return;
+  const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);
+  btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+    const selected=$('offerPlatform')?.value||'all';
+    let providers=[];
+    if(selected==='shopee')providers=['shopee'];
+    else if(selected==='mercadolivre')providers=['mercadolivre'];
+    else{
+      if(state.shopee?.connected)providers.push('shopee');
+      if(state.mercadolivre?.connected)providers.push('mercadolivre');
+    }
+    if(!providers.length)throw new Error('Conecte a Shopee ou o Mercado Livre antes de buscar ofertas.');
+    if(providers.includes('shopee')&&!state.shopee?.connected)throw new Error('A Shopee não está conectada nesta conta.');
+    if(providers.includes('mercadolivre')&&!state.mercadolivre?.connected)throw new Error('O Mercado Livre não está conectado nesta conta.');
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},body:JSON.stringify({providers})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error||'A busca automática desta plataforma ainda não está configurada no backend.');
+    if(data.imported)toast(`${data.imported} oferta(s) importada(s) de ${providers.join(' + ')}.`,'ok');
+    else toast(`Busca concluída: ${providers.join(' + ')}.`,'ok');
+    await loadProducts();
+  }catch(e){toast((e?.message||String(e))+' Você ainda pode adicionar ofertas manualmente.','error')}
+  finally{btns.forEach(b=>{b.disabled=false;b.textContent='↻ Buscar ofertas'})}
+}
 $('syncOffers').onclick=syncOffers;$('syncOffers2').onclick=syncOffers;
 
 function fillCampaignProducts(){$('cProduct').innerHTML='<option value="">Sem produto</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}
@@ -400,9 +437,11 @@ async function loadIntegrations(){
     }
   });
 
+  state.shopee={connected:shopeeConnected};
   document.querySelectorAll('.connectProvider[data-provider="shopee"]').forEach(btn=>{
-    btn.textContent=shopeeConnected?'Conectada ✓':'Conectar';
-    btn.disabled=shopeeConnected;
+    btn.textContent=shopeeConnected?'Desconectar':'Conectar';
+    btn.classList.toggle('dangerBtn',shopeeConnected);
+    btn.disabled=false;
   });
   const dashShopee=$('dashShopeeStatus');
   if(dashShopee)dashShopee.textContent=shopeeConnected?'Conectada':'Pendente';
@@ -477,7 +516,8 @@ async function loadIntegrations(){
   const dashIg=$('dashIgStatus');
   if(dashIg)dashIg.textContent=igConnected?(state.instagram.username?'@'+state.instagram.username:'Conectado'):'Pendente';
   document.querySelectorAll('.connectProvider[data-provider="instagram"]').forEach(btn=>{
-    btn.textContent=igConnected?'Reconectar Instagram':'Conectar Instagram';
+    btn.textContent=igConnected?'Desconectar Instagram':'Conectar Instagram';
+    btn.classList.toggle('dangerBtn',igConnected);
     btn.disabled=false;
   });
 
@@ -492,6 +532,7 @@ async function loadIntegrations(){
   }
 
   let mlConnected=false;
+  let mlUserId=null;
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session?.access_token) throw new Error('Sessao ausente');
@@ -510,6 +551,7 @@ async function loadIntegrations(){
     console.log('Mercado Livre status do usuario atual:',r.status,d);
 
     mlConnected=r.ok && (d.connected===true || d.status==='connected');
+    mlUserId=d.ml_user_id||null;
     if(returnedFromMl && mlConnected) toast('Mercado Livre conectado com sucesso!','ok');
   }catch(e){
     console.warn('Falha ao consultar mercadolivre-status:',e);
@@ -522,49 +564,46 @@ async function loadIntegrations(){
       $(id).classList.toggle('connectedStatus',mlConnected);
     }
   });
+  state.mercadolivre={connected:mlConnected,ml_user_id:mlUserId};
   const dashMl=$('dashMlStatus');
   if(dashMl)dashMl.textContent=mlConnected?'Conectado':'Pendente';
+  document.querySelectorAll('.connectProvider[data-provider="mercadolivre"]').forEach(btn=>{
+    btn.textContent=mlConnected?'Desconectar':'Conectar';
+    btn.classList.toggle('dangerBtn',mlConnected);
+    btn.disabled=false;
+  });
 }
+async function callDisconnect(provider){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+  const endpoint=provider==='mercadolivre'?'mercadolivre-disconnect':provider==='instagram'?'instagram-disconnect':provider==='shopee'?'shopee-disconnect':null;
+  if(!endpoint)throw new Error('Desconexão não disponível.');
+  const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY}});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||data.success===false)throw new Error(data.error||`Erro HTTP ${r.status}`);
+  return data;
+}
+
 document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{
   if(!requireAccess())return;
   const provider=btn.dataset.provider;
-
-  if(provider==='shopee'){
-    $('shopeeAppId').value='';
-    $('shopeeSecret').value='';
-    $('shopeeConnectMsg').textContent='';
-    modal('shopeeConnectModal');
-    return;
-  }
-
-  if(provider==='whatsapp'){
-    $('waWabaId').value='';
-    $('waPhoneNumberId').value='';
-    $('waAccessToken').value='';
-    $('waDefaultRecipient').value='';
-    $('waConnectMsg').textContent=state.whatsapp.connected
-      ? `Conectada${state.whatsapp.verified_name?' como '+state.whatsapp.verified_name:''}${state.whatsapp.phone_mask?' • '+state.whatsapp.phone_mask:''}. Para trocar as credenciais, preencha os campos novamente.`
-      : 'Informe os dados da Meta. O token será enviado somente ao backend e armazenado criptografado.';
-    $('waTestArea').classList.toggle('hidden',!state.whatsapp.connected);
-    modal('whatsappConnectModal');
-    return;
-  }
-
   try{
+    if(provider==='shopee'){
+      if(state.shopee?.connected){if(!confirm('Desconectar a Shopee desta conta? Seus produtos já salvos não serão apagados.'))return;await callDisconnect('shopee');await loadIntegrations();toast('Shopee desconectada.','ok');return;}
+      $('shopeeAppId').value='';$('shopeeSecret').value='';$('shopeeConnectMsg').textContent='';modal('shopeeConnectModal');return;
+    }
+    if(provider==='mercadolivre'&&state.mercadolivre?.connected){if(!confirm('Desconectar o Mercado Livre desta conta? Seus produtos já salvos não serão apagados.'))return;await callDisconnect('mercadolivre');await loadIntegrations();toast('Mercado Livre desconectado.','ok');return;}
+    if(provider==='instagram'&&state.instagram?.connected){if(!confirm('Desconectar o Instagram desta conta?'))return;await callDisconnect('instagram');await loadIntegrations();toast('Instagram desconectado.','ok');return;}
+    if(provider==='whatsapp'){$('waWabaId').value='';$('waPhoneNumberId').value='';$('waAccessToken').value='';$('waDefaultRecipient').value='';$('waConnectMsg').textContent='Informe os dados da Meta.';modal('whatsappConnectModal');return;}
     const{data:{session}}=await sb.auth.getSession();
     if(!session)throw new Error('Sessão expirada. Faça login novamente.');
     const endpoint=provider==='mercadolivre'?'mercadolivre-auth':provider==='instagram'?'instagram-auth':`auth-start?provider=${encodeURIComponent(provider)}`;
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{
-      method:'GET',
-      headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}
-    });
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});
     const data=await r.json().catch(()=>({}));
     const url=data.authorization_url||data.url;
     if(r.ok&&url){location.href=url;return;}
     toast(data.error||'Integração ainda não configurada no backend.','error');
-  }catch(e){
-    toast('Não foi possível iniciar a integração: '+e.message,'error');
-  }
+  }catch(e){toast('Não foi possível alterar a integração: '+(e?.message||String(e)),'error')}
 });
 
 
@@ -876,20 +915,20 @@ if($('sideBotToggle'))$('sideBotToggle').onclick=()=>setBotActive(!botIsActive()
 if($('openBotConfig'))$('openBotConfig').onclick=async()=>{
   let c=getBotConfig();
   try{
-    const {data,error}=await sb.from('bot_automation_settings').select('interval_minutes,min_discount,min_price,max_price,daily_limit,queue_target,selected_categories,use_mercadolivre,use_shopee,use_instagram').eq('user_id',state.user.id).maybeSingle();
+    const {data,error}=await sb.from('bot_automation_settings').select('interval_minutes,min_discount,min_price,max_price,daily_limit,queue_target,selected_categories,use_mercadolivre,use_shopee,use_instagram,mercadolivre_active,shopee_active,mercadolivre_interval_minutes,shopee_interval_minutes').eq('user_id',state.user.id).maybeSingle();
     if(error)throw error;
     if(data){
-      c={interval:Number(data.interval_minutes??15),minDiscount:Number(data.min_discount??20),minPrice:Number(data.min_price??0),maxPrice:Number(data.max_price??10000),dailyLimit:Number(data.daily_limit??30),queueTarget:Number(data.queue_target??20),categories:Array.isArray(data.selected_categories)?data.selected_categories:['Geral'],useML:data.use_mercadolivre===true,useShopee:data.use_shopee===true,useWhats:false,useInstagram:data.use_instagram===true};
+      c={interval:Number(data.interval_minutes??15),minDiscount:Number(data.min_discount??20),minPrice:Number(data.min_price??0),maxPrice:Number(data.max_price??10000),dailyLimit:Number(data.daily_limit??30),queueTarget:Number(data.queue_target??20),categories:Array.isArray(data.selected_categories)?data.selected_categories:['Geral'],useML:data.use_mercadolivre===true,useShopee:data.use_shopee===true,useWhats:false,useInstagram:data.use_instagram===true,mlActive:data.mercadolivre_active!==false,shopeeActive:data.shopee_active!==false,mlInterval:Number(data.mercadolivre_interval_minutes??data.interval_minutes??15),shopeeInterval:Number(data.shopee_interval_minutes??data.interval_minutes??15)};
       localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));
     }
   }catch(e){console.warn('Configuração backend indisponível; usando cache local.',e);}
-  $('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botQueueTarget').value=c.queueTarget||20;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;const selected=new Set(c.categories||['Geral']);document.querySelectorAll('[data-bot-category]').forEach(x=>x.checked=selected.has(x.value));modal('botConfigModal');
+  $('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botQueueTarget').value=c.queueTarget||20;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;if($('botMLActive'))$('botMLActive').checked=c.mlActive!==false;if($('botShopeeActive'))$('botShopeeActive').checked=c.shopeeActive!==false;if($('botMLInterval'))$('botMLInterval').value=String(c.mlInterval||c.interval);if($('botShopeeInterval'))$('botShopeeInterval').value=String(c.shopeeInterval||c.interval);const selected=new Set(c.categories||['Geral']);document.querySelectorAll('[data-bot-category]').forEach(x=>x.checked=selected.has(x.value));modal('botConfigModal');
 };
 if($('saveBotConfig'))$('saveBotConfig').onclick=async()=>{
-  const categories=[...document.querySelectorAll('[data-bot-category]:checked')].map(x=>x.value);if(!categories.length)return toast('Escolha pelo menos uma categoria.','error');const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),queueTarget:Math.max(1,Math.min(50,Number($('botQueueTarget').value||20))),categories,useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:false,useInstagram:$('botUseInstagram').checked};
+  const categories=[...document.querySelectorAll('[data-bot-category]:checked')].map(x=>x.value);if(!categories.length)return toast('Escolha pelo menos uma categoria.','error');const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),queueTarget:Math.max(1,Math.min(50,Number($('botQueueTarget').value||20))),categories,useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:false,useInstagram:$('botUseInstagram').checked,mlActive:$('botMLActive')?.checked!==false,shopeeActive:$('botShopeeActive')?.checked!==false,mlInterval:Number($('botMLInterval')?.value||$('botInterval').value),shopeeInterval:Number($('botShopeeInterval')?.value||$('botInterval').value)};
   const btn=$('saveBotConfig');btn.disabled=true;
   try{
-    const payload={user_id:state.user.id,interval_minutes:c.interval,daily_limit:c.dailyLimit,min_discount:c.minDiscount,min_price:c.minPrice,max_price:c.maxPrice,queue_target:c.queueTarget,selected_categories:c.categories,use_mercadolivre:c.useML,use_shopee:c.useShopee,use_whatsapp:false,use_instagram:c.useInstagram,updated_at:new Date().toISOString()};
+    const payload={user_id:state.user.id,interval_minutes:c.interval,daily_limit:c.dailyLimit,min_discount:c.minDiscount,min_price:c.minPrice,max_price:c.maxPrice,queue_target:c.queueTarget,selected_categories:c.categories,use_mercadolivre:c.useML,use_shopee:c.useShopee,use_whatsapp:false,use_instagram:c.useInstagram,mercadolivre_active:c.mlActive,shopee_active:c.shopeeActive,mercadolivre_interval_minutes:c.mlInterval,shopee_interval_minutes:c.shopeeInterval,updated_at:new Date().toISOString()};
     const {data:saved,error}=await sb.from('bot_automation_settings').upsert(payload,{onConflict:'user_id'}).select('queue_target,selected_categories').single();if(error)throw error;
     c.queueTarget=Number(saved?.queue_target??c.queueTarget);c.categories=Array.isArray(saved?.selected_categories)?saved.selected_categories:c.categories;
     localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));closeModal('botConfigModal');renderBotV51();toast('Configurações salvas na sua conta.','ok');
