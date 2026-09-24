@@ -1,39 +1,293 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#070b18">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
-  <title>Instagram conectado | Bot Afiliados Premium</title>
+  <title>Instagram conectado! | Bot Afiliados</title>
+
   <style>
-    *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;color:#fff;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 78% 18%,rgba(125,39,255,.28),transparent 28%),radial-gradient(circle at 18% 78%,rgba(0,179,255,.18),transparent 30%),linear-gradient(145deg,#050814,#090d1b 48%,#070916);overflow:hidden}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.34;background-image:linear-gradient(rgba(94,110,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(94,110,255,.06) 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(to bottom,transparent,black 16%,black 86%,transparent)}body:after{content:"";position:fixed;left:-8%;right:-8%;bottom:-8vh;height:34vh;pointer-events:none;background:linear-gradient(90deg,transparent 0 4%,#11182a 4% 8%,transparent 8% 11%,#121b30 11% 16%,transparent 16% 20%,#0f172a 20% 27%,transparent 27% 31%,#111a2e 31% 38%,transparent 38% 43%,#11192b 43% 51%,transparent 51% 55%,#121c31 55% 63%,transparent 63% 68%,#10182a 68% 75%,transparent 75% 80%,#111a2f 80% 88%,transparent 88%);opacity:.52;filter:drop-shadow(0 -10px 28px rgba(108,51,255,.14))}.wrap{position:relative;z-index:2;width:min(680px,100%)}.brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:18px;font-weight:950;letter-spacing:.5px}.brand .bot{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:linear-gradient(135deg,#4ec9ff,#714cff 60%,#b832ff);box-shadow:0 0 32px rgba(94,102,255,.35);font-size:25px}.brand b{font-size:20px}.brand small{display:block;color:#9aa6c4;font-size:9px;letter-spacing:2.3px;margin-top:2px}.card{padding:46px 38px;text-align:center;border:1px solid rgba(112,91,255,.5);border-radius:28px;background:linear-gradient(180deg,rgba(15,23,43,.94),rgba(8,13,27,.96));box-shadow:0 30px 90px rgba(0,0,0,.52),0 0 70px rgba(93,55,255,.12);backdrop-filter:blur(16px)}.ig{width:96px;height:96px;margin:0 auto 25px;display:grid;place-items:center;border-radius:28px;background:radial-gradient(circle at 30% 100%,#ffd600 0 16%,#ff7a00 31%,#ff0169 52%,#d300c5 68%,#7638fa 86%);box-shadow:0 18px 48px rgba(225,48,108,.28);font-size:48px;font-weight:950}.card h1{font-size:clamp(30px,5vw,46px);margin:0 0 14px;letter-spacing:-1.4px}.card p{max-width:540px;margin:0 auto;color:#b9c3dc;line-height:1.65;font-size:16px}.success{display:flex;align-items:center;justify-content:center;gap:12px;margin:28px 0 22px;padding:16px 18px;border:1px solid rgba(38,225,126,.35);border-radius:15px;background:rgba(17,159,88,.12);color:#67f0a5;font-weight:900}.success span{display:grid;place-items:center;width:30px;height:30px;border:2px solid currentColor;border-radius:50%}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{display:block;padding:15px 18px;border-radius:13px;text-decoration:none;font-weight:950}.primary{color:#fff;background:linear-gradient(90deg,#4c65ff,#733cff 52%,#9b2dff);box-shadow:0 14px 35px rgba(87,67,255,.24)}.secondary{color:#dbe4ff;border:1px solid #334260;background:#111a2d}.signature{margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}.signature img{width:min(220px,70%);height:48px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(156,77,255,.38))}.signature small{display:block;color:#77839f;font-size:9px;letter-spacing:1.7px;margin-top:3px}.errorBox{border-color:rgba(255,93,119,.35);background:rgba(160,31,55,.12);color:#ff9bad}@media(max-width:560px){.card{padding:34px 20px}.actions{grid-template-columns:1fr}.ig{width:82px;height:82px}.brand b{font-size:17px}}
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #f8fafc;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 18px;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 76% 18%, rgba(126, 34, 206, .28), transparent 34%),
+        radial-gradient(circle at 17% 78%, rgba(14, 165, 233, .20), transparent 32%),
+        linear-gradient(135deg, #030712 0%, #071329 48%, #160c35 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .30;
+      background-image:
+        linear-gradient(rgba(56,189,248,.11) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,.11) 1px, transparent 1px);
+      background-size: 84px 84px;
+      mask-image: linear-gradient(to bottom, black, transparent 88%);
+    }
+
+    .city {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 25vh;
+      opacity: .34;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg,
+          #07101f 0 8%, transparent 8% 12%,
+          #07101f 12% 21%, transparent 21% 26%,
+          #07101f 26% 34%, transparent 34% 39%,
+          #07101f 39% 51%, transparent 51% 56%,
+          #07101f 56% 67%, transparent 67% 72%,
+          #07101f 72% 82%, transparent 82% 88%,
+          #07101f 88% 100%);
+      clip-path: polygon(
+        0 48%, 8% 48%, 8% 26%, 12% 26%, 12% 58%, 21% 58%,
+        21% 20%, 26% 20%, 26% 68%, 34% 68%, 34% 36%, 39% 36%,
+        39% 12%, 51% 12%, 51% 62%, 56% 62%, 56% 30%, 67% 30%,
+        67% 56%, 72% 56%, 72% 23%, 82% 23%, 82% 65%, 88% 65%,
+        88% 40%, 100% 40%, 100% 100%, 0 100%
+      );
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 2;
+      width: min(680px, 100%);
+    }
+
+    .brand-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      font-weight: 900;
+      letter-spacing: 1.4px;
+    }
+
+    .bot-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      font-size: 26px;
+      background: linear-gradient(135deg, #38bdf8, #7c3aed 60%, #d946ef);
+      box-shadow: 0 0 30px rgba(124,58,237,.35);
+    }
+
+    .brand-top small {
+      display: block;
+      margin-top: 4px;
+      color: #94a3b8;
+      font-size: 9px;
+      letter-spacing: 3px;
+    }
+
+    .card {
+      padding: 46px 38px 34px;
+      text-align: center;
+      border: 1px solid rgba(139,92,246,.62);
+      border-radius: 28px;
+      background: rgba(10, 19, 39, .93);
+      box-shadow: 0 30px 90px rgba(0,0,0,.45);
+      backdrop-filter: blur(10px);
+    }
+
+    .ig-icon {
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 28px;
+      font-size: 54px;
+      font-weight: 900;
+      background: linear-gradient(145deg, #7c3aed, #f000b8 45%, #ff7a00 76%, #ffd600);
+      box-shadow: 0 16px 42px rgba(236,72,153,.30);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 6vw, 48px);
+      line-height: 1.05;
+    }
+
+    .message {
+      margin: 22px auto 0;
+      max-width: 550px;
+      color: #cbd5e1;
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    .username {
+      color: #c084fc;
+      font-weight: 800;
+    }
+
+    .status {
+      margin: 30px 0 22px;
+      padding: 18px;
+      border-radius: 16px;
+      font-weight: 800;
+    }
+
+    .status.success {
+      color: #5ee9a4;
+      border: 1px solid rgba(16,185,129,.55);
+      background: rgba(6,78,59,.28);
+    }
+
+    .status.error {
+      color: #fca5a5;
+      border: 1px solid rgba(239,68,68,.55);
+      background: rgba(127,29,29,.25);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .btn {
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 18px;
+      border-radius: 14px;
+      text-decoration: none;
+      color: white;
+      font-weight: 800;
+      border: 1px solid #334155;
+      background: #111c31;
+    }
+
+    .btn.primary {
+      border: 0;
+      background: linear-gradient(100deg, #4f65ff, #a226ff);
+    }
+
+    .signature {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(148,163,184,.15);
+      color: #94a3b8;
+      font-size: 10px;
+      letter-spacing: 3px;
+    }
+
+    .signature strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #d8b4fe;
+      font-size: 17px;
+      letter-spacing: 1px;
+      font-style: italic;
+    }
+
+    @media (max-width: 600px) {
+      .card { padding: 36px 20px 28px; }
+      .actions { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
+
 <body>
+  <div class="city"></div>
+
   <main class="wrap">
-    <div class="brand"><span class="bot">🤖</span><span><b>BOT AFILIADOS</b><small>PREMIUM AUTOMATION</small></span></div>
-    <section class="card">
-      <div class="ig" id="statusIcon">✓</div>
-      <h1 id="statusTitle">Instagram conectado!</h1>
-      <p id="statusText">Sua conta foi vinculada ao Bot Afiliados com sucesso. A conexão fica associada ao usuário que autorizou o acesso.</p>
-      <div class="success" id="statusBox"><span>✓</span><b>Integração concluída com sucesso</b></div>
-      <div class="actions">
-        <a class="btn primary" href="./?ig=connected#bot">← Voltar ao painel</a>
-        <a class="btn secondary" href="ofertas/">Ver minha vitrine</a>
+    <div class="brand-top">
+      <div class="bot-icon">🤖</div>
+      <div>
+        BOT AFILIADOS
+        <small>PREMIUM AUTOMATION</small>
       </div>
-      <div class="signature"><img src="gustavobarbosa-signature.png" alt="GustavoBarbosa"><small>CRIADO POR GUSTAVOBARBOSA</small></div>
+    </div>
+
+    <section class="card">
+      <div class="ig-icon" id="mainIcon">✓</div>
+
+      <h1 id="title">Instagram conectado!</h1>
+
+      <p class="message" id="message">
+        Sua conta foi vinculada ao Bot Afiliados com sucesso.
+      </p>
+
+      <div class="status success" id="statusBox">
+        ✓ Integração concluída com sucesso
+      </div>
+
+      <div class="actions">
+        <a class="btn primary"
+           href="https://gustavo2025001.github.io/bot-afiliados/">
+          ← Voltar ao painel
+        </a>
+
+        <a class="btn"
+           href="https://gustavo2025001.github.io/bot-afiliados/ofertas/">
+          Ver minha vitrine
+        </a>
+      </div>
+
+      <div class="signature">
+        <strong>GustavoBarbosa</strong>
+        CRIADO POR GUSTAVOBARBOSA
+      </div>
     </section>
   </main>
+
   <script>
-    const p=new URLSearchParams(location.search);
-    if(p.get('status')==='error'){
-      document.getElementById('statusIcon').textContent='!';
-      document.getElementById('statusTitle').textContent='Não foi possível conectar';
-      document.getElementById('statusText').textContent='A autorização não foi concluída. Volte ao painel e tente conectar o Instagram novamente.';
-      const box=document.getElementById('statusBox');box.classList.add('errorBox');box.innerHTML='<span>!</span><b>Conexão não concluída</b>';
-      document.querySelector('.primary').href='./#bot';
-      document.querySelector('.primary').textContent='← Voltar e tentar novamente';
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status") || "success";
+    const username = params.get("username") || "";
+    const errorMessage = params.get("message") || "";
+
+    const title = document.getElementById("title");
+    const message = document.getElementById("message");
+    const statusBox = document.getElementById("statusBox");
+    const mainIcon = document.getElementById("mainIcon");
+
+    if (status === "error") {
+      document.title = "Erro ao conectar Instagram | Bot Afiliados";
+      mainIcon.textContent = "!";
+      title.textContent = "Erro ao conectar Instagram";
+      message.textContent =
+        errorMessage ||
+        "Não foi possível concluir a integração. Volte ao painel e tente novamente.";
+      statusBox.className = "status error";
+      statusBox.textContent = "Não foi possível concluir a integração";
+    } else {
+      const safeUsername = username ? "@" + username : "Instagram";
+      title.textContent = "Instagram conectado!";
+      message.innerHTML =
+        'A conta <span class="username"></span> foi vinculada ao Bot Afiliados com sucesso. ' +
+        'A conexão ficou associada ao usuário que autorizou o acesso.';
+      message.querySelector(".username").textContent = safeUsername;
+      statusBox.className = "status success";
+      statusBox.textContent = "✓ Integração concluída com sucesso";
     }
   </script>
 </body>
