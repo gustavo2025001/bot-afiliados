@@ -217,7 +217,7 @@ function renderQueue(){
 }
 function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;if($('previewInstagram'))$('previewInstagram').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;if($('previewInstagram'))$('previewInstagram').disabled=false;$('previewCopy').disabled=false}
 $('previewCopy').onclick=async()=>{const p=state.products.find(x=>x.id===state.previewId);if(!p)return;await navigator.clipboard.writeText(adMessage(p));toast('Mensagem copiada.','ok')};
-$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const p=state.products.find(x=>x.queued);if(!p)return toast('A fila está vazia.','error');shareWhatsApp(p.id)};
+$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const platform=$('queuePlatform')?.value||'all';const p=state.products.find(x=>x.queued&&(platform==='all'||x.platform===platform));if(!p)return toast('A fila desta plataforma está vazia.','error');shareWhatsApp(p.id)};
 window.shareWhatsApp=async id=>{
   if(!requireAccess())return;
   const p=state.products.find(x=>x.id===id);
@@ -339,7 +339,7 @@ async function syncOffers(){
 
     const callProvider=async(provider)=>{
       const endpoint=provider==='mercadolivre'
-        ? 'fetch-mercadolivre-offers'
+        ? 'fetch-offers-mercadolivre'
         : 'fetch-offers';
 
       const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{
