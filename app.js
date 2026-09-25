@@ -5,7 +5,7 @@ const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
-const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false},instagram:{connected:false,username:null,account_type:null},shopee:{connected:false},mercadolivre:{connected:false,ml_user_id:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},todayClicks:0,previewId:null};
+const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],queue:[],integrations:[],whatsapp:{connected:false},instagram:{connected:false,username:null,account_type:null},shopee:{connected:false},mercadolivre:{connected:false,ml_user_id:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},todayClicks:0,previewId:null};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
@@ -75,6 +75,7 @@ async function boot(user){
 
   await Promise.all([
     loadProducts(),
+    loadQueue(),
     loadCampaigns(),
     loadSchedules(),
     loadPosts(),
@@ -154,6 +155,14 @@ function clearProductForm(){['pPaste','pTitle','pPrice','pOldPrice','pDiscount',
 
 async function loadProducts(){if(!state.user?.id)return;const{data,error}=await sb.from('products').select('*').eq('user_id',state.user.id).order('created_at',{ascending:false});if(error){renderDbError('productList','Produtos',error);return}state.products=(data||[]).filter(p=>p.user_id===state.user.id);renderProducts();renderOffers();renderQueue()}
 
+async function loadQueue(){
+  if(!state.user?.id)return;
+  const {data,error}=await sb.from('post_queue').select('*').eq('user_id',state.user.id).eq('status','pending').order('priority',{ascending:false}).order('created_at',{ascending:true});
+  if(error){console.error('Erro ao carregar post_queue:',error);state.queue=[];renderQueue();return;}
+  state.queue=data||[];
+  renderProducts();renderOffers();renderQueue();
+}
+
 // Realtime: atualiza Produtos/Ofertas/Fila automaticamente quando a tabela products mudar.
 let productsRealtimeChannel = null;
 let productsRealtimeTimer = null;
@@ -192,14 +201,14 @@ function startProductsRealtime(){
 }
 
 function renderAll(){renderProducts();renderOffers();renderQueue();renderCampaigns();renderSchedules();renderPosts();renderUsage();renderBotV51()}
-function renderProducts(){if(!$('productList'))return;$('offerCount').textContent=state.products.length;$('queueCount').textContent=state.products.filter(x=>x.queued).length;$('productList').innerHTML=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><div class="rowActions"><button class="iconBtn" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Fila':'+ Fila'}</button><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';const mini=state.products.slice(0,5);$('offerListMini').innerHTML=mini.map(p=>`<div class="miniOffer"><div class="miniThumb">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍'}</div><div><b>${esc(p.title)}</b><small>${money(p.price)} • ${esc(p.platform)}</small></div><span class="tag">${p.discount_percent?'-'+p.discount_percent+'%':'OFERTA'}</span></div>`).join('')||'<div class="empty">Nenhuma oferta ainda.</div>'}
+function renderProducts(){if(!$('productList'))return;$('offerCount').textContent=state.products.length;$('queueCount').textContent=state.queue.filter(x=>x.status==='pending').length;$('productList').innerHTML=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><div class="rowActions"><button class="iconBtn" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Fila':'+ Fila'}</button><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';const mini=state.products.slice(0,5);$('offerListMini').innerHTML=mini.map(p=>`<div class="miniOffer"><div class="miniThumb">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍'}</div><div><b>${esc(p.title)}</b><small>${money(p.price)} • ${esc(p.platform)}</small></div><span class="tag">${p.discount_percent?'-'+p.discount_percent+'%':'OFERTA'}</span></div>`).join('')||'<div class="empty">Nenhuma oferta ainda.</div>'}
 function filteredOffers(){const q=($('offerSearch')?.value||'').toLowerCase(),plat=$('offerPlatform')?.value||'all',f=$('offerFilter')?.value||'all';return state.products.filter(p=>(!q||[p.title,p.category,p.platform].join(' ').toLowerCase().includes(q))&&(plat==='all'||p.platform===plat)&&(f==='all'||f==='queue'&&p.queued||f==='favorite'&&p.favorite))}
 function renderOffers(){if(!$('offerGrid'))return;const list=filteredOffers();$('offerGrid').innerHTML=list.map(p=>`<article class="offerCard"><div class="offerImage">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.title)}" loading="lazy">`:'🛍️'}</div><div class="offerBody"><div class="offerTop"><span class="platformTag">${esc(p.platform).toUpperCase()}</span>${p.discount_percent?`<span class="discountTag">-${p.discount_percent}%</span>`:''}</div><h3>${esc(p.title)}</h3>${Number(p.old_price)>Number(p.price)?`<div class="oldPrice">${money(p.old_price)}</div>`:''}<div class="price">${money(p.price)}</div><div class="offerActions"><button class="${p.queued?'queueActive':''}" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Na fila':'+ Fila'}</button><button onclick="favoriteProduct('${p.id}',${!p.favorite})">${p.favorite?'♥ Favorito':'♡ Favoritar'}</button><button onclick="selectPreview('${p.id}')">👁 Prévia</button><button onclick="shareWhatsApp('${p.id}')">🟢 WhatsApp</button><button onclick="publishInstagram('${p.id}')">📸 Instagram</button></div></div></article>`).join('')||'<div class="empty">Nenhuma oferta encontrada.</div>'}
 ['offerSearch','offerPlatform','offerFilter'].forEach(id=>$(id)?.addEventListener(id==='offerSearch'?'input':'change',renderOffers));
 $('queuePlatform')?.addEventListener('change',renderQueue);
 $('saveProduct').onclick=async()=>{if(!requireAccess())return;const title=$('pTitle').value.trim(),link=$('pLink').value.trim();if(!title||!link)return $('pMsg').textContent='Preencha título e link.';$('pMsg').textContent='Salvando...';const num=id=>Number(String($(id).value||'0').replace(/\./g,'').replace(',','.'))||0;const payload={user_id:state.user.id,title,price:num('pPrice'),old_price:num('pOldPrice'),discount_percent:Number($('pDiscount').value)||0,platform:$('pPlatform').value,affiliate_url:link,image_url:$('pImage').value.trim()||null,category:$('pCategory').value.trim()||'Geral',source:'manual'};const{error}=await sb.from('products').insert(payload);if(error)return $('pMsg').textContent=error.message;closeModal('productModal');await loadProducts();toast('Oferta salva no Supabase.','ok')};
 window.deleteProduct=async id=>{if(!requireAccess())return;if(!confirm('Excluir este produto?'))return;const{error}=await sb.from('products').delete().eq('id',id).eq('user_id',state.user.id);if(error)return toast(error.message,'error');await loadProducts();toast('Produto excluído.','ok')};
-window.queueProduct=async(id,on)=>{if(!requireAccess())return;const{error}=await sb.rpc('toggle_product_queue',{target_product:id,put_in_queue:on});if(error)return toast(error.message,'error');const p=state.products.find(x=>x.id===id);if(p)p.queued=on;renderProducts();renderOffers();renderQueue()};
+window.queueProduct=async(id,on)=>{if(!requireAccess())return;const{error}=await sb.rpc('toggle_product_queue',{target_product:id,put_in_queue:on});if(error)return toast(error.message,'error');await Promise.all([loadProducts(),loadQueue()]);renderProducts();renderOffers();renderQueue()};
 window.favoriteProduct=async(id,on)=>{const{error}=await sb.rpc('toggle_product_favorite',{target_product:id,make_favorite:on});if(error)return toast(error.message,'error');const p=state.products.find(x=>x.id===id);if(p)p.favorite=on;renderOffers()};
 
 function adMessage(p){const old=Number(p.old_price)>Number(p.price)?`💸 De: ${money(p.old_price)}\n`:'';const disc=p.discount_percent?`🔥 ${p.discount_percent}% OFF\n`:'';return `🔥 OFERTA ${String(p.platform||'').toUpperCase()} 🔥\n\n🛍️ ${p.title}\n${old}💰 Por: ${money(p.price)}\n${disc}\n🛒 Confira agora:\n${p.affiliate_url}`}
@@ -207,9 +216,10 @@ window.selectPreview=id=>{state.previewId=id;renderPreview();showView('queue')};
 function renderQueue(){
   if(!$('queueList'))return;
   const platform=$('queuePlatform')?.value||'all';
-  const allQueued=state.products.filter(x=>x.queued);
+  const pending=state.queue.filter(x=>x.status==='pending');
+  const allQueued=pending.map(item=>state.products.find(p=>p.id===item.product_id)).filter(Boolean);
   const q=allQueued.filter(p=>platform==='all'||p.platform===platform);
-  $('queueCount').textContent=allQueued.length;
+  $('queueCount').textContent=pending.length;
   $('queueList').innerHTML=q.map((p,i)=>`<div class="tableRow"><div><b>${String(i+1).padStart(2,'0')} • ${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><span class="tag">${esc(p.platform).toUpperCase()}</span><span>${p.discount_percent?'-'+p.discount_percent+'%':'Oferta'}</span><div class="rowActions"><button class="iconBtn" onclick="selectPreview('${p.id}')">Prévia</button><button class="dangerBtn" onclick="queueProduct('${p.id}',false)">Remover</button></div></div>`).join('')||'<div class="empty">Nenhum item desta plataforma na fila.</div>';
   if(!state.previewId&&q[0])state.previewId=q[0].id;
   if(state.previewId&&!q.some(x=>x.id===state.previewId))state.previewId=q[0]?.id||null;
@@ -217,7 +227,7 @@ function renderQueue(){
 }
 function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;if($('previewInstagram'))$('previewInstagram').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;if($('previewInstagram'))$('previewInstagram').disabled=false;$('previewCopy').disabled=false}
 $('previewCopy').onclick=async()=>{const p=state.products.find(x=>x.id===state.previewId);if(!p)return;await navigator.clipboard.writeText(adMessage(p));toast('Mensagem copiada.','ok')};
-$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const platform=$('queuePlatform')?.value||'all';const p=state.products.find(x=>x.queued&&(platform==='all'||x.platform===platform));if(!p)return toast('A fila desta plataforma está vazia.','error');shareWhatsApp(p.id)};
+$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const platform=$('queuePlatform')?.value||'all';const queuedIds=new Set(state.queue.filter(x=>x.status==='pending').map(x=>x.product_id));const p=state.products.find(x=>queuedIds.has(x.id)&&(platform==='all'||x.platform===platform));if(!p)return toast('A fila desta plataforma está vazia.','error');shareWhatsApp(p.id)};
 window.shareWhatsApp=async id=>{
   if(!requireAccess())return;
   const p=state.products.find(x=>x.id===id);
