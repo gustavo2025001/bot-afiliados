@@ -1,0 +1,18 @@
+BOT AFILIADOS — ATUALIZAÇÃO CATEGORIAS / RETIRADA DE MANUTENÇÃO
+
+O QUE FOI ALTERADO:
+- index.html principal voltou a apresentar a tela do Bot Afiliados, sem a página de manutenção.
+- Configuração do bot: seleção de nichos por cliente, incluindo ROUPAS e CALÇADOS separadamente.
+- Limite de fila no painel: 30 pendentes por cliente.
+- auto-fill-queue: código revisado em supabase/functions/auto-fill-queue/index.ts, com filtro por categoria e limite 30.
+- app.js: impede selecionar Geral junto com outros nichos.
+
+ATENÇÃO: NÃO FAÇA DEPLOY EM PRODUÇÃO SEM TESTAR.
+- O ZIP anterior tinha uma tela de manutenção como index.html e uma cópia mais antiga do painel em bot-afiliados-main/index.html. O painel restaurado pode não ter todos os campos usados pelo app.js mais recente. Teste em ambiente de homologação antes de substituir o site.
+- O código de auto-fill-queue enviado anteriormente não tem checagem confiável de assinatura/limite diário; isso deve ser implementado no backend com tabelas e política de plano verificadas.
+- A exclusão após publicação confirmada e a deduplicação durável dependem de process-post-queue e esquema do banco, não estão garantidas neste pacote.
+- Não reative os Cron Jobs até validar os controles e o consumo.
+- Se o cliente marcar Geral, o filtro aceita todas as categorias. Se marcar só Roupas, seleciona apenas roupas; só Calçados, apenas calçados.
+- Classificação por palavras no título é aproximada. Melhorar com categoria oficial da API da Shopee quando disponível.
+
+ANTES DE PUBLICAR: criar backup, validar index/app.js, verificar o esquema do Supabase e testar com um usuário de teste.
