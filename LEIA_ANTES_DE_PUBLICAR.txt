@@ -1,0 +1,20 @@
+BOT AFILIADOS - REVISAO INTEGRADA 11/10/2026
+
+O QUE FOI PREPARADO
+- index.html restaurado do projeto original (sem pagina de manutencao).
+- app.js e tela com categorias por cliente e limite visual de fila ate 30.
+- auto-fill-queue: limite 30, intervalo individual e ignora produtos queued=true.
+- fetch-offers: indice (user_id,platform,offer_id), filtra por nicho ANTES de gravar, reduz logs volumosos.
+- process-post-queue: mantem queued=true apos sucesso para nao republicar a mesma oferta automaticamente.
+- SQL opcional de limpeza para itens done com log confirmado.
+
+ATENCAO: NAO PUBLICAR TUDO DE UMA VEZ EM PRODUCAO.
+- Nao foi possivel executar testes reais no Supabase/Meta nem confirmar o esquema completo.
+- A classificacao por palavras pode descartar ofertas validas ou aceitar ofertas erradas.
+- A busca da Shopee continua retornando 20 ofertas por chamada; filtra localmente.
+- Exclusao automatica, controle atomico do limite diario, trava transacional e integracao completa com os workers existentes AINDA EXIGEM TESTES/IMPLEMENTACAO.
+- As assinaturas do plano sao conferidas em process-post-queue, mas o painel nao foi validado ao vivo.
+- NAO reative cron jobs ate testar seguranca, historico e publicacao duplicada.
+- Nao apague post_logs nem produtos vinculados a campanhas/agendamentos.
+
+ORDEM SUGERIDA: backup -> homologacao -> testar 1 usuario -> testar filtros e contadores -> validar historico -> deploy gradual -> cron.
