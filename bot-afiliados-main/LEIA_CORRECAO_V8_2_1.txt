@@ -1,0 +1,21 @@
+BOT AFILIADOS — CORREÇÃO V8.2.1 (FRONTEND)
+
+Correções realizadas no app.js principal:
+1. Buscar Ofertas agora verifica o Supabase ANTES e DEPOIS da busca. O número retornado pela Edge Function não é mais apresentado como número de produtos salvos.
+2. Mensagem específica se a API retornar ofertas mas a conta continuar sem produtos cadastrados.
+3. A busca mantém Shopee e Mercado Livre em funções distintas e não mistura registros de contas.
+4. Produtos são consultados por user_id, com proteção contra resposta atrasada de outra sessão.
+5. Status e preferências locais do bot usam chaves separadas por usuário; ao entrar, status ativo é consultado no banco.
+6. Após a busca, filtros de texto e favoritos/fila são limpos para não esconder produtos importados.
+7. Atualizado cache-busting app.js?v=8.2.1 no index.html.
+
+NÃO FOI ALTERADO: login/cadastro, credenciais, estrutura do banco, tabelas, RLS, cron, funções Edge implantadas ou publicação em redes sociais.
+
+LIMITAÇÃO IMPORTANTE:
+O ZIP original NÃO inclui o código das Edge Functions fetch-offers e fetch-offers-mercadolivre nem a auto-fill-queue implantada. Logo, não é possível garantir que a API grave ofertas na conta ou que a fila seja abastecida apenas com a alteração do frontend.
+Se uma conta continuar mostrando 0 produtos após a busca, investigar/deployar a Edge Function fetch-offers da Shopee para persistir produtos com user_id da sessão autenticada, respeitando RLS/credenciais por usuário.
+Apenas o frontend foi alterado; nenhum deploy foi feito.
+
+INSTALAÇÃO:
+Faça backup da versão atual no GitHub. Substitua os arquivos da raiz pelo conteúdo desta pasta (sem duplicar a pasta bot-afiliados-main). Publique pelo fluxo normal do GitHub Pages. Faça login nas duas contas e teste Buscar ofertas.
+Mantenha processadores de publicação desligados até a fila ser validada.

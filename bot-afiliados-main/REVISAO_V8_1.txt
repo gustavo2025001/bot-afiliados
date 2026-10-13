@@ -1,0 +1,12 @@
+BOT AFILIADOS V8.1 — REVISÃO/CORREÇÃO
+
+Corrigido nesta entrega:
+1. Plano de fundo Opção 5 agora é um asset real: assets/opcao5-bg.svg e está aplicado no login e painel.
+2. Vitrine ganhou item próprio no menu lateral e continua em /ofertas/.
+3. Assinatura GUSTAVOBARBOSA permanece no menu e ganhou rodapé no painel.
+4. Página instagram-conectado.html permanece incluída, com botão de voltar ao painel e abrir a vitrine.
+5. instagram-callback continua redirecionando para instagram-conectado.html, evitando HTML cru no domínio da Edge Function.
+6. Dados do dashboard continuam ligados aos IDs/rotinas existentes; não foram substituídos por números fictícios do mockup.
+7. Removida a pasta duplicada bot-afiliados-main/bot-afiliados-main que podia confundir na publicação.
+
+IMPORTANTE: para o callback usar a página nova, publicar os arquivos no GitHub Pages e depois fazer deploy da Edge Function instagram-callback.

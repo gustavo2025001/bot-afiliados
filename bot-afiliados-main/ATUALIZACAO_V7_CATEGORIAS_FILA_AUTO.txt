@@ -1,0 +1,9 @@
+BOT AFILIADOS V7 - CATEGORIAS + FILA AUTOMATICA
+
+1. Execute supabase/AUTOMATIC_QUEUE_CATEGORIES_V7.sql no SQL Editor.
+2. Faça deploy da Edge Function supabase/functions/process-post-queue.
+3. Publique index.html, app.js e style.css no GitHub Pages.
+4. No painel: Configurações do Bot > escolha categorias > quantidade da fila > Salvar > Ativar Bot.
+
+O process-post-queue continua publicando como antes, mas agora antes de cada rodada repõe automaticamente a fila do cliente até queue_target usando somente produtos do próprio user_id e os filtros/categorias escolhidos.
+O fundo do painel foi trocado por um visual abstrato sem a escrita/marca d'água no fundo.

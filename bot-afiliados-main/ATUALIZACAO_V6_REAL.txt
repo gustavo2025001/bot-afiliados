@@ -1,0 +1,26 @@
+BOT AFILIADOS - ATUALIZAÇÃO V6 REAL
+
+Base: bot-afiliados-main(5).zip
+
+ALTERADO
+- Vitrine continua usando affiliate_url do produto do próprio lojista.
+- Cliques na vitrine agora podem ser registrados de verdade em store_clicks.
+- Dashboard mostra cliques reais do dia após executar supabase/metricas_vitrine_v6.sql.
+- Publicações continuam contando apenas post_logs Instagram status=success.
+- Conversões e receita não exibem números inventados: ficam aguardando dados reais da plataforma/loja.
+- WhatsApp marcado EM BREVE e conexão removida da interface.
+- Facebook e Telegram marcados EM DESENVOLVIMENTO.
+- Central de ajuda atualizada com status dos canais e controle de som.
+- Som opcional ao ativar o bot.
+- Configuração do bot passa a salvar em bot_automation_settings (por user_id) em vez de somente localStorage.
+- Admin ganhou contadores de sucessos, fila pendente e saúde da automação.
+- Fundo ganhou acabamento visual discreto usando a assinatura já existente.
+
+ANTES DE PUBLICAR
+1. Execute supabase/metricas_vitrine_v6.sql no SQL Editor do Supabase.
+2. Depois publique os arquivos no GitHub Pages.
+
+SEGURANÇA
+- Nenhum service_role/secret novo foi colocado no frontend.
+- Métricas são lidas pelo dono autenticado via RLS.
+- track_store_click só registra clique se o produto realmente pertencer à vitrine informada e estiver ativo.

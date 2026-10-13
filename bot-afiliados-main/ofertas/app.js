@@ -56,10 +56,47 @@ function render(){
         <span class="tag">🛍️ ${esc(platformName(p.platform))}</span>
         <div class="title">${esc(p.title)}</div>
         <div class="price">${money(p.price)}</div>
-        <a class="buy" href="${esc(safeUrl(p.affiliate_url))}" target="_blank" rel="noopener sponsored">${esc(buyLabel(p.platform))}</a>
+        <a class="buy" href="${esc(safeUrl(p.affiliate_url))}" target="_blank" rel="noopener sponsored" data-buy-product="${esc(p.id)}">${esc(buyLabel(p.platform))}</a>
       </div>
     </article>`).join("");
 }
+
+async function trackStoreClick(productId){
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/track_store_click`,{
+      method:"POST",
+      cache:"no-store",
+      keepalive:true,
+      headers:{
+        apikey:SUPABASE_ANON_KEY,
+        Authorization:`Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        p_user_id:owner,
+        p_product_id:productId
+      })
+    });
+
+    if(!r.ok){
+      const errorText=await r.text();
+      console.error("Erro ao registrar clique da vitrine:",r.status,errorText);
+      return;
+    }
+
+    console.log("Clique da vitrine registrado:",productId);
+  }catch(e){
+    console.error("Erro ao registrar clique da vitrine:",e);
+  }
+}
+
+document.addEventListener("click",e=>{
+  const link=e.target.closest("[data-buy-product]");
+  if(!link) return;
+
+  const productId=link.getAttribute("data-buy-product");
+  if(productId) trackStoreClick(productId);
+});
 
 async function load(){
   $("status").textContent="Carregando ofertas...";

@@ -5,7 +5,7 @@ const SUPABASE_URL='https://jhdezfnafhekimolfiuu.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_lAfLqmLZ0rp9UZHATVXtyg_4Wmsn18i';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
-const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],integrations:[],whatsapp:{connected:false,verified_name:null,phone_mask:null,has_default_recipient:false},instagram:{connected:false,username:null,account_type:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},todayPublished:0,previewId:null};
+const state={user:null,profile:null,subscription:null,products:[],campaigns:[],schedules:[],posts:[],queue:[],integrations:[],whatsapp:{connected:false},instagram:{connected:false,username:null,account_type:null},shopee:{connected:false},mercadolivre:{connected:false,ml_user_id:null},share:{used:0,limit:null,unlimited:false,allowed:false,plan:null},todayClicks:0,previewId:null};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fmtDate=v=>v?new Date(v).toLocaleString('pt-BR'):'—';
@@ -14,6 +14,23 @@ const modal=id=>$(id)?.classList.remove('hidden');
 const closeModal=id=>$(id)?.classList.add('hidden');
 const ADMIN_EMAIL='gustavodepaulabarbosag@gmail.com';
 const ADMIN_USER_ID='b1fa7a00-02fe-4c7c-b2a5-3873eee3f5d1';
+
+const SOUND_KEY='botAfiliadosSoundEnabled';
+const soundEnabled=()=>localStorage.getItem(SOUND_KEY)!=='0';
+function playUiSound(kind='ok'){
+  if(!soundEnabled())return;
+  try{
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    const ctx=new C(),osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);osc.type='sine';
+    osc.frequency.value=kind==='publish'?880:kind==='activate'?660:520;
+    gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.08,ctx.currentTime+.015);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.18);
+    osc.start();osc.stop(ctx.currentTime+.2);
+  }catch(e){}
+}
+function updateSoundButton(){const b=$('toggleSoundHelp');if(b)b.textContent='Som: '+(soundEnabled()?'ligado':'desligado');}
+document.addEventListener('click',e=>{if(e.target?.id==='toggleSoundHelp'){localStorage.setItem(SOUND_KEY,soundEnabled()?'0':'1');updateSoundButton();if(soundEnabled())playUiSound('ok');}});
+
 
 const isAdmin=()=>{
   const email=String(state.user?.email||'').trim().toLowerCase();
@@ -34,6 +51,11 @@ $('forgotBtn').onclick=async()=>{const email=$('loginEmail').value.trim();if(!em
 $('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
 
 async function boot(user){
+  // Nunca mantenha dados de outra sessao durante troca de contas.
+  if(state.user?.id && state.user.id!==user.id){
+    state.products=[];state.queue=[];state.posts=[];state.campaigns=[];state.schedules=[];
+    if(productsRealtimeChannel){sb.removeChannel(productsRealtimeChannel);productsRealtimeChannel=null;}
+  }
   state.user=user;
   $('authShell').classList.add('hidden');
   $('panel').classList.remove('hidden');
@@ -58,16 +80,29 @@ async function boot(user){
 
   await Promise.all([
     loadProducts(),
+    loadQueue(),
     loadCampaigns(),
     loadSchedules(),
     loadPosts(),
     loadIntegrations(),
-    loadShareStatus()
+    loadShareStatus(),
+    loadTodayClicks()
   ]);
 
   // Inicia a escuta em tempo real somente depois da carga inicial.
   startProductsRealtime();
 
+  // O estado real do bot vem do Supabase, nunca do navegador de outra conta.
+  try{
+    const {data:serverBot,error:botError}=await sb.from('bot_automation_settings')
+      .select('active,interval_minutes,selected_categories,queue_target')
+      .eq('user_id',user.id).maybeSingle();
+    if(botError)throw botError;
+    localStorage.setItem(botStorageKey(BOT_ACTIVE_KEY),serverBot?.active===true?'1':'0');
+  }catch(e){
+    console.warn('Não foi possível confirmar o status do bot no servidor:',e);
+    localStorage.setItem(botStorageKey(BOT_ACTIVE_KEY),'0');
+  }
   if(isAdmin()) await loadAdmin();
   renderAll();
 }
@@ -108,38 +143,21 @@ function requireAccess(){if(hasAccess())return true;toast('Assinatura ativa nece
 function showView(name){if(['offers','products','queue','campaigns','schedules','integrations','channels','reports'].includes(name)&&!requireAccess())return;if(name==='admin'&&!isAdmin())return toast('Acesso administrativo negado.','error');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('view-'+name)?.classList.add('active');document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===name));if(name==='queue')renderQueue();if(name==='offers')renderOffers()}
 document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>showView(btn.dataset.view));document.querySelectorAll('[data-view-jump]').forEach(btn=>btn.onclick=()=>showView(btn.dataset.viewJump));document.querySelectorAll('[data-open-plans]').forEach(btn=>btn.onclick=()=>showView('plans'));document.querySelectorAll('.closeModal').forEach(btn=>btn.onclick=()=>closeModal(btn.dataset.modal));
 
-async function loadTodayPublished(){
-  if(!state.user?.id){state.todayPublished=0;return}
-  const start=new Date(); start.setHours(0,0,0,0);
-  const end=new Date(start); end.setDate(end.getDate()+1);
-  const {count,error}=await sb
-    .from('post_logs')
-    .select('id',{count:'exact',head:true})
-    .eq('user_id',state.user.id)
-    .eq('provider','instagram')
-    .eq('status','success')
-    .gte('created_at',start.toISOString())
-    .lt('created_at',end.toISOString());
-  if(error){
-    console.error('Falha ao contar publicacoes confirmadas:',error);
-    state.todayPublished=0;
-    return;
-  }
-  state.todayPublished=Number(count||0);
+async function loadTodayClicks(){
+  if(!state.user?.id)return;
+  const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),now.getDate()),end=new Date(start);end.setDate(end.getDate()+1);
+  const {count,error}=await sb.from('store_clicks').select('id',{count:'exact',head:true}).eq('user_id',state.user.id).gte('created_at',start.toISOString()).lt('created_at',end.toISOString());
+  state.todayClicks=error?0:Number(count||0);
+  const el=$('todayClickCount');if(el)el.textContent=state.todayClicks;
 }
-async function loadShareStatus(){
-  const{data,error}=await sb.rpc('get_share_status');
-  if(error)state.share={used:0,limit:null,unlimited:isAdmin(),allowed:hasAccess(),plan:isAdmin()?'admin':null};
-  else{const r=Array.isArray(data)?data[0]:data;if(r)state.share={used:Number(r.used||0),limit:r.daily_limit==null?null:Number(r.daily_limit),unlimited:!!r.unlimited,allowed:!!r.allowed,plan:r.plan_code}}
-  await loadTodayPublished();
-  renderUsage();
-}
+
+async function loadShareStatus(){const{data,error}=await sb.rpc('get_share_status');if(error){state.share={used:0,limit:null,unlimited:isAdmin(),allowed:hasAccess(),plan:isAdmin()?'admin':null};return}const r=Array.isArray(data)?data[0]:data;if(r)state.share={used:Number(r.used||0),limit:r.daily_limit==null?null:Number(r.daily_limit),unlimited:!!r.unlimited,allowed:!!r.allowed,plan:r.plan_code};renderUsage()}
 function renderUsage(){
   const s=state.share;
   const label=s.unlimited?`${s.used} / ILIMITADO`:`${s.used} / ${s.limit??'—'}`;
   const daily=$('dailyUsage'); if(daily)daily.textContent=label;
-  // Publicadas hoje NAO usa mais shares/daily_usage. Conta somente Instagram confirmado como success do usuario logado.
-  const today=$('todayPostCount'); if(today)today.textContent=state.todayPublished||0;
+  const today=$('todayPostCount'); if(today)today.textContent=Number(state.todaySuccessfulPosts||0);
+  const clicks=$('todayClickCount');if(clicks)clicks.textContent=Number(state.todayClicks||0);
   const pct=s.unlimited?Math.min(s.used,100):s.limit?Math.min(100,(s.used/s.limit)*100):0;
   const bar=$('usageBar'); if(bar)bar.style.width=pct+'%';
   const help=$('planCardHelp');
@@ -151,7 +169,25 @@ $('parseOffer').onclick=()=>{const p=parseOfferText($('pPaste').value);if(!p)ret
 $('newProduct').onclick=$('newProduct2').onclick=$('quickProduct').onclick=$('newOffer').onclick=()=>{if(!requireAccess())return;clearProductForm();modal('productModal')};
 function clearProductForm(){['pPaste','pTitle','pPrice','pOldPrice','pDiscount','pLink','pImage','pCategory'].forEach(id=>{if($(id))$(id).value=''});$('pCategory').value='Geral';$('pMsg').textContent=''}
 
-async function loadProducts(){if(!state.user?.id)return;const{data,error}=await sb.from('products').select('*').eq('user_id',state.user.id).order('created_at',{ascending:false});if(error){renderDbError('productList','Produtos',error);return}state.products=(data||[]).filter(p=>p.user_id===state.user.id);renderProducts();renderOffers();renderQueue()}
+async function loadProducts(){
+  const userId=state.user?.id;
+  if(!userId)return {ok:false,count:0};
+  // Requisicoes atrasadas de uma conta nao podem sobrescrever outra sessao.
+  const {data,error}=await sb.from('products').select('*').eq('user_id',userId).order('created_at',{ascending:false});
+  if(state.user?.id!==userId)return {ok:false,count:0,stale:true};
+  if(error){console.error('Falha carregando produtos:',error);renderDbError('productList','Produtos',error);return {ok:false,error:error.message,count:state.products.length};}
+  state.products=(data||[]).filter(p=>p.user_id===userId);
+  renderProducts();renderOffers();renderQueue();
+  return {ok:true,count:state.products.length};
+}
+
+async function loadQueue(){
+  if(!state.user?.id)return;
+  const {data,error}=await sb.from('post_queue').select('*').eq('user_id',state.user.id).eq('status','pending').order('priority',{ascending:false}).order('created_at',{ascending:true});
+  if(error){console.error('Erro ao carregar post_queue:',error);state.queue=[];renderQueue();return;}
+  state.queue=data||[];
+  renderProducts();renderOffers();renderQueue();
+}
 
 // Realtime: atualiza Produtos/Ofertas/Fila automaticamente quando a tabela products mudar.
 let productsRealtimeChannel = null;
@@ -191,21 +227,33 @@ function startProductsRealtime(){
 }
 
 function renderAll(){renderProducts();renderOffers();renderQueue();renderCampaigns();renderSchedules();renderPosts();renderUsage();renderBotV51()}
-function renderProducts(){if(!$('productList'))return;$('offerCount').textContent=state.products.length;$('queueCount').textContent=state.products.filter(x=>x.queued).length;$('productList').innerHTML=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><div class="rowActions"><button class="iconBtn" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Fila':'+ Fila'}</button><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';const mini=state.products.slice(0,5);$('offerListMini').innerHTML=mini.map(p=>`<div class="miniOffer"><div class="miniThumb">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍'}</div><div><b>${esc(p.title)}</b><small>${money(p.price)} • ${esc(p.platform)}</small></div><span class="tag">${p.discount_percent?'-'+p.discount_percent+'%':'OFERTA'}</span></div>`).join('')||'<div class="empty">Nenhuma oferta ainda.</div>'}
+function renderProducts(){if(!$('productList'))return;$('offerCount').textContent=state.products.length;$('queueCount').textContent=state.queue.filter(x=>x.status==='pending').length;$('productList').innerHTML=state.products.map(p=>`<div class="tableRow"><div><b>${esc(p.title)}</b><small>${esc(p.affiliate_url)}</small></div><span class="tag">${esc(p.platform)}</span><span>${money(p.price)}</span><div class="rowActions"><button class="iconBtn" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Fila':'+ Fila'}</button><button class="dangerBtn" onclick="deleteProduct('${p.id}')">Excluir</button></div></div>`).join('')||'<div class="empty">Nenhum produto cadastrado.</div>';const mini=state.products.slice(0,5);$('offerListMini').innerHTML=mini.map(p=>`<div class="miniOffer"><div class="miniThumb">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍'}</div><div><b>${esc(p.title)}</b><small>${money(p.price)} • ${esc(p.platform)}</small></div><span class="tag">${p.discount_percent?'-'+p.discount_percent+'%':'OFERTA'}</span></div>`).join('')||'<div class="empty">Nenhuma oferta ainda.</div>'}
 function filteredOffers(){const q=($('offerSearch')?.value||'').toLowerCase(),plat=$('offerPlatform')?.value||'all',f=$('offerFilter')?.value||'all';return state.products.filter(p=>(!q||[p.title,p.category,p.platform].join(' ').toLowerCase().includes(q))&&(plat==='all'||p.platform===plat)&&(f==='all'||f==='queue'&&p.queued||f==='favorite'&&p.favorite))}
 function renderOffers(){if(!$('offerGrid'))return;const list=filteredOffers();$('offerGrid').innerHTML=list.map(p=>`<article class="offerCard"><div class="offerImage">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.title)}" loading="lazy">`:'🛍️'}</div><div class="offerBody"><div class="offerTop"><span class="platformTag">${esc(p.platform).toUpperCase()}</span>${p.discount_percent?`<span class="discountTag">-${p.discount_percent}%</span>`:''}</div><h3>${esc(p.title)}</h3>${Number(p.old_price)>Number(p.price)?`<div class="oldPrice">${money(p.old_price)}</div>`:''}<div class="price">${money(p.price)}</div><div class="offerActions"><button class="${p.queued?'queueActive':''}" onclick="queueProduct('${p.id}',${!p.queued})">${p.queued?'✓ Na fila':'+ Fila'}</button><button onclick="favoriteProduct('${p.id}',${!p.favorite})">${p.favorite?'♥ Favorito':'♡ Favoritar'}</button><button onclick="selectPreview('${p.id}')">👁 Prévia</button><button onclick="shareWhatsApp('${p.id}')">🟢 WhatsApp</button><button onclick="publishInstagram('${p.id}')">📸 Instagram</button></div></div></article>`).join('')||'<div class="empty">Nenhuma oferta encontrada.</div>'}
 ['offerSearch','offerPlatform','offerFilter'].forEach(id=>$(id)?.addEventListener(id==='offerSearch'?'input':'change',renderOffers));
+$('queuePlatform')?.addEventListener('change',renderQueue);
 $('saveProduct').onclick=async()=>{if(!requireAccess())return;const title=$('pTitle').value.trim(),link=$('pLink').value.trim();if(!title||!link)return $('pMsg').textContent='Preencha título e link.';$('pMsg').textContent='Salvando...';const num=id=>Number(String($(id).value||'0').replace(/\./g,'').replace(',','.'))||0;const payload={user_id:state.user.id,title,price:num('pPrice'),old_price:num('pOldPrice'),discount_percent:Number($('pDiscount').value)||0,platform:$('pPlatform').value,affiliate_url:link,image_url:$('pImage').value.trim()||null,category:$('pCategory').value.trim()||'Geral',source:'manual'};const{error}=await sb.from('products').insert(payload);if(error)return $('pMsg').textContent=error.message;closeModal('productModal');await loadProducts();toast('Oferta salva no Supabase.','ok')};
 window.deleteProduct=async id=>{if(!requireAccess())return;if(!confirm('Excluir este produto?'))return;const{error}=await sb.from('products').delete().eq('id',id).eq('user_id',state.user.id);if(error)return toast(error.message,'error');await loadProducts();toast('Produto excluído.','ok')};
-window.queueProduct=async(id,on)=>{if(!requireAccess())return;const{error}=await sb.rpc('toggle_product_queue',{target_product:id,put_in_queue:on});if(error)return toast(error.message,'error');const p=state.products.find(x=>x.id===id);if(p)p.queued=on;renderProducts();renderOffers();renderQueue()};
+window.queueProduct=async(id,on)=>{if(!requireAccess())return;const{error}=await sb.rpc('toggle_product_queue',{target_product:id,put_in_queue:on});if(error)return toast(error.message,'error');await Promise.all([loadProducts(),loadQueue()]);renderProducts();renderOffers();renderQueue()};
 window.favoriteProduct=async(id,on)=>{const{error}=await sb.rpc('toggle_product_favorite',{target_product:id,make_favorite:on});if(error)return toast(error.message,'error');const p=state.products.find(x=>x.id===id);if(p)p.favorite=on;renderOffers()};
 
 function adMessage(p){const old=Number(p.old_price)>Number(p.price)?`💸 De: ${money(p.old_price)}\n`:'';const disc=p.discount_percent?`🔥 ${p.discount_percent}% OFF\n`:'';return `🔥 OFERTA ${String(p.platform||'').toUpperCase()} 🔥\n\n🛍️ ${p.title}\n${old}💰 Por: ${money(p.price)}\n${disc}\n🛒 Confira agora:\n${p.affiliate_url}`}
 window.selectPreview=id=>{state.previewId=id;renderPreview();showView('queue')};
-function renderQueue(){if(!$('queueList'))return;const q=state.products.filter(x=>x.queued);$('queueCount').textContent=q.length;$('queueList').innerHTML=q.map((p,i)=>`<div class="tableRow"><div><b>${String(i+1).padStart(2,'0')} • ${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><span class="tag">NA FILA</span><span>${p.discount_percent?'-'+p.discount_percent+'%':'Oferta'}</span><div class="rowActions"><button class="iconBtn" onclick="selectPreview('${p.id}')">Prévia</button><button class="dangerBtn" onclick="queueProduct('${p.id}',false)">Remover</button></div></div>`).join('')||'<div class="empty">Fila vazia. Adicione ofertas na página Ofertas.</div>';if(!state.previewId&&q[0])state.previewId=q[0].id;if(state.previewId&&!state.products.some(x=>x.id===state.previewId))state.previewId=q[0]?.id||null;renderPreview()}
+function renderQueue(){
+  if(!$('queueList'))return;
+  const platform=$('queuePlatform')?.value||'all';
+  const pending=state.queue.filter(x=>x.status==='pending');
+  const allQueued=pending.map(item=>state.products.find(p=>p.id===item.product_id)).filter(Boolean);
+  const q=allQueued.filter(p=>platform==='all'||p.platform===platform);
+  $('queueCount').textContent=pending.length;
+  $('queueList').innerHTML=q.map((p,i)=>`<div class="tableRow"><div><b>${String(i+1).padStart(2,'0')} • ${esc(p.title)}</b><small>${esc(p.platform)} • ${money(p.price)}</small></div><span class="tag">${esc(p.platform).toUpperCase()}</span><span>${p.discount_percent?'-'+p.discount_percent+'%':'Oferta'}</span><div class="rowActions"><button class="iconBtn" onclick="selectPreview('${p.id}')">Prévia</button><button class="dangerBtn" onclick="queueProduct('${p.id}',false)">Remover</button></div></div>`).join('')||'<div class="empty">Nenhum item desta plataforma na fila.</div>';
+  if(!state.previewId&&q[0])state.previewId=q[0].id;
+  if(state.previewId&&!q.some(x=>x.id===state.previewId))state.previewId=q[0]?.id||null;
+  renderPreview();
+}
 function renderPreview(){const p=state.products.find(x=>x.id===state.previewId);if(!p){$('previewTitle').textContent='Selecione uma oferta';$('previewImage').innerHTML='🛍';$('previewMessage').textContent='A mensagem aparecerá aqui.';$('previewWhatsApp').disabled=true;if($('previewInstagram'))$('previewInstagram').disabled=true;$('previewCopy').disabled=true;return}$('previewTitle').textContent=p.title;$('previewImage').innerHTML=p.image_url?`<img src="${esc(p.image_url)}" alt="">`:'🛍';$('previewMessage').textContent=adMessage(p);$('previewWhatsApp').disabled=false;if($('previewInstagram'))$('previewInstagram').disabled=false;$('previewCopy').disabled=false}
 $('previewCopy').onclick=async()=>{const p=state.products.find(x=>x.id===state.previewId);if(!p)return;await navigator.clipboard.writeText(adMessage(p));toast('Mensagem copiada.','ok')};
-$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const p=state.products.find(x=>x.queued);if(!p)return toast('A fila está vazia.','error');shareWhatsApp(p.id)};
+$('previewWhatsApp').onclick=()=>state.previewId&&shareWhatsApp(state.previewId);if($('previewInstagram'))$('previewInstagram').onclick=()=>state.previewId&&publishInstagram(state.previewId);$('shareNext').onclick=()=>{const platform=$('queuePlatform')?.value||'all';const queuedIds=new Set(state.queue.filter(x=>x.status==='pending').map(x=>x.product_id));const p=state.products.find(x=>queuedIds.has(x.id)&&(platform==='all'||x.platform===platform));if(!p)return toast('A fila desta plataforma está vazia.','error');shareWhatsApp(p.id)};
 window.shareWhatsApp=async id=>{
   if(!requireAccess())return;
   const p=state.products.find(x=>x.id===id);
@@ -312,8 +360,71 @@ window.publishInstagram = async id => {
   }
 };
 
-async function syncOffers(){if(!requireAccess())return;const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});try{const{data:{session}}=await sb.auth.getSession();const r=await fetch(`${SUPABASE_URL}/functions/v1/fetch-offers`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY},body:JSON.stringify({providers:['shopee','mercadolivre']})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Integração de ofertas ainda não configurada.');if(data.imported)toast(`${data.imported} oferta(s) importada(s).`,'ok');await loadProducts()}catch(e){toast(e.message+' Você ainda pode adicionar ofertas manualmente.','error')}finally{btns.forEach((b,i)=>{b.disabled=false;b.textContent=i?'↻ Buscar ofertas':'↻ Buscar ofertas'})}}
-$('syncOffers').onclick=syncOffers;$('syncOffers2').onclick=syncOffers;
+async function syncOffers(){
+  if(!requireAccess())return;
+  const btns=[$('syncOffers'),$('syncOffers2')].filter(Boolean);
+  btns.forEach(b=>{b.disabled=true;b.textContent='Buscando...'});
+  try{
+    const userId=state.user?.id;
+    const {data:{session},error:sessionError}=await sb.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!session?.access_token||session.user?.id!==userId)throw new Error('Sessão inválida. Entre novamente.');
+    const selected=$('offerPlatform')?.value||'all';
+    const providers=selected==='all'
+      ? [state.shopee?.connected?'shopee':null,state.mercadolivre?.connected?'mercadolivre':null].filter(Boolean)
+      : [selected];
+    if(selected==='shopee'&&!state.shopee?.connected)throw new Error('Conecte a Shopee nesta conta.');
+    if(selected==='mercadolivre'&&!state.mercadolivre?.connected)throw new Error('Conecte o Mercado Livre nesta conta.');
+    if(!providers.length)throw new Error('Conecte uma plataforma antes de buscar ofertas.');
+    const before=await loadProducts();
+    if(!before.ok)throw new Error('Não foi possível conferir os produtos atuais: '+(before.error||'sessão alterada'));
+    const beforeIds=new Set(state.products.map(p=>p.id));
+    const results=[],failures=[];
+    for(const provider of providers){
+      try{
+        const endpoint=provider==='mercadolivre'?'fetch-offers-mercadolivre':'fetch-offers';
+        const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY},
+          body:JSON.stringify({provider})
+        });
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok||data.success===false)throw new Error(data.error||data.message||`Erro HTTP ${r.status}`);
+        results.push({provider,reported:Number(data.count??data.imported??data.offers?.length??0),data});
+      }catch(e){failures.push(`${provider}: ${e?.message||String(e)}`);}
+    }
+    if(state.user?.id!==userId)throw new Error('Conta alterada durante a busca.');
+    // A API pode retornar 20 ofertas pesquisadas sem gravar nenhuma no banco.
+    // Apenas registros realmente visiveis na conta sao considerados importados.
+    const after=await loadProducts();
+    if(!after.ok)throw new Error('Busca concluída, mas não foi possível verificar o banco: '+(after.error||'sessão alterada'));
+    if($('offerSearch'))$('offerSearch').value='';
+    if($('offerFilter'))$('offerFilter').value='all';
+    renderOffers();
+    const newRows=state.products.filter(p=>!beforeIds.has(p.id));
+    const reported=results.reduce((n,x)=>n+x.reported,0);
+    const byProvider=providers.map(provider=>{
+      const count=state.products.filter(p=>p.platform===provider).length;
+      return `${provider==='shopee'?'Shopee':'Mercado Livre'}: ${count} cadastrada(s)`;
+    }).join(' | ');
+    console.info('Conferência da busca de ofertas',{usuario:userId,informadas_pela_api:reported,novas_no_banco:newRows.length,total_na_conta:after.count,plataformas:byProvider,erros:failures});
+    if(failures.length&&results.length===0)throw new Error(failures.join(' | '));
+    if(!after.count){
+      if($('offerSearch'))$('offerSearch').value='';
+      if($('offerFilter'))$('offerFilter').value='all';
+      toast(`A busca informou ${reported} oferta(s), mas nenhuma foi salva nesta conta. Verifique a função de importação.`, 'error');
+    }else if(newRows.length){
+      toast(`${newRows.length} nova(s) oferta(s) confirmada(s) no Supabase. ${byProvider}`, 'ok');
+    }else{
+      toast(`Nenhuma oferta nova salva. ${byProvider}. API informou ${reported}; pode ter atualizado ofertas existentes.`, 'ok');
+    }
+    if(failures.length)console.warn('Falhas por plataforma:',failures);
+  }catch(e){console.error('Erro buscando ofertas:',e);toast(e?.message||String(e),'error');}
+  finally{btns.forEach(b=>{b.disabled=false;b.textContent='↻ Buscar ofertas';});}
+}
+
+$('syncOffers').onclick=syncOffers;
+$('syncOffers2').onclick=syncOffers;
 
 function fillCampaignProducts(){$('cProduct').innerHTML='<option value="">Sem produto</option>'+state.products.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}
 $('newCampaign').onclick=()=>{if(!requireAccess())return;fillCampaignProducts();modal('campaignModal')};$('cProduct').onchange=()=>{const p=state.products.find(x=>x.id===$('cProduct').value);if(p&&!$('cMessage').value.trim())$('cMessage').value=adMessage(p)};
@@ -344,7 +455,29 @@ function renderSchedules(){
 $('saveSchedule').onclick=async()=>{if(!requireAccess())return;const campaign_id=$('sCampaign').value,when=$('sWhen').value;if(!campaign_id||!when)return $('sMsg').textContent='Selecione a campanha e a data.';const d=new Date(when);if(d<=new Date())return $('sMsg').textContent='Escolha uma data futura.';const{error}=await sb.from('schedules').insert({user_id:state.user.id,campaign_id,scheduled_for:d.toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Sao_Paulo',status:'pending'});if(error)return $('sMsg').textContent=error.message;closeModal('scheduleModal');$('sWhen').value='';await loadSchedules();toast('Agendamento criado.','ok')};
 window.deleteSchedule=async id=>{if(!confirm('Excluir este agendamento?'))return;const{error}=await sb.from('schedules').delete().eq('id',id);if(error)return toast(error.message,'error');await loadSchedules()};
 
-async function loadPosts(){const{data,error}=await sb.from('post_logs').select('*').order('created_at',{ascending:false}).limit(100);if(error){renderDbError('postList','Histórico',error);return}state.posts=data||[];renderPosts()}
+async function loadPosts(){
+  if(!state.user?.id)return;
+  const{data,error}=await sb.from('post_logs').select('*').eq('user_id',state.user.id).order('created_at',{ascending:false}).limit(100);
+  if(error){renderDbError('postList','Histórico',error);return}
+  state.posts=data||[];
+
+  // Publicadas hoje = somente publicacoes REAIS confirmadas com sucesso.
+  // Nao usa daily_usage, tentativas ou erros.
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const end=new Date(start); end.setDate(end.getDate()+1);
+  const{count,error:countError}=await sb.from('post_logs')
+    .select('id',{count:'exact',head:true})
+    .eq('user_id',state.user.id)
+    .eq('provider','instagram')
+    .eq('status','success')
+    .gte('created_at',start.toISOString())
+    .lt('created_at',end.toISOString());
+  state.todaySuccessfulPosts=countError?0:Number(count||0);
+  renderPosts();
+  renderUsage();
+  renderBotV51();
+}
 function renderPosts(){if(!$('postList'))return;$('postList').innerHTML=state.posts.map(p=>`<div class="tableRow"><div><b>${esc(p.provider)}</b><small>${fmtDate(p.created_at)}</small></div><span class="tag">${esc(p.status)}</span><span>${esc(p.response_meta?.title||p.external_id||'—')}</span><span>${esc(p.error_message||'')}</span></div>`).join('')||'<div class="empty">Nenhum compartilhamento registrado.</div>'}
 async function loadIntegrations(){
   const {data,error}=await sb.from('integrations').select('provider,status,updated_at');
@@ -377,14 +510,21 @@ async function loadIntegrations(){
     }
   });
 
+  state.shopee={connected:shopeeConnected};
   document.querySelectorAll('.connectProvider[data-provider="shopee"]').forEach(btn=>{
-    btn.textContent=shopeeConnected?'Conectada ✓':'Conectar';
-    btn.disabled=shopeeConnected;
+    btn.textContent=shopeeConnected?'Desconectar':'Conectar';
+    btn.classList.toggle('dangerBtn',shopeeConnected);
+    btn.disabled=false;
   });
   const dashShopee=$('dashShopeeStatus');
   if(dashShopee)dashShopee.textContent=shopeeConnected?'Conectada':'Pendente';
 
-  // WHATSAPP CLOUD API: o status real vem da Edge Function e nunca expõe o token.
+  // WHATSAPP: temporariamente desativado no produto. Mantemos o backend antigo sem expor ao cliente.
+  state.whatsapp={connected:false};
+  ['waStatus','waStatus2'].forEach(id=>{const el=$(id);if(el){el.textContent='EM BREVE';el.classList.remove('connectedStatus');}});
+  const dashWaSoon=$('dashWaStatus');if(dashWaSoon)dashWaSoon.textContent='Em breve';
+
+  /* WHATSAPP CLOUD API LEGADO (oculto da interface):
   let waConnected=false;
   try{
     const {data:{session}}=await sb.auth.getSession();
@@ -414,6 +554,8 @@ async function loadIntegrations(){
     btn.textContent=waConnected?'Gerenciar API':'Conectar API';
     btn.disabled=false;
   });
+
+  */
 
   // INSTAGRAM: status real vem do backend por usuário. O navegador nunca recebe o token.
   const igParams=new URLSearchParams(location.search);
@@ -447,7 +589,8 @@ async function loadIntegrations(){
   const dashIg=$('dashIgStatus');
   if(dashIg)dashIg.textContent=igConnected?(state.instagram.username?'@'+state.instagram.username:'Conectado'):'Pendente';
   document.querySelectorAll('.connectProvider[data-provider="instagram"]').forEach(btn=>{
-    btn.textContent=igConnected?'Reconectar Instagram':'Conectar Instagram';
+    btn.textContent=igConnected?'Desconectar Instagram':'Conectar Instagram';
+    btn.classList.toggle('dangerBtn',igConnected);
     btn.disabled=false;
   });
 
@@ -462,6 +605,7 @@ async function loadIntegrations(){
   }
 
   let mlConnected=false;
+  let mlUserId=null;
   try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session?.access_token) throw new Error('Sessao ausente');
@@ -480,6 +624,7 @@ async function loadIntegrations(){
     console.log('Mercado Livre status do usuario atual:',r.status,d);
 
     mlConnected=r.ok && (d.connected===true || d.status==='connected');
+    mlUserId=d.ml_user_id||null;
     if(returnedFromMl && mlConnected) toast('Mercado Livre conectado com sucesso!','ok');
   }catch(e){
     console.warn('Falha ao consultar mercadolivre-status:',e);
@@ -492,49 +637,46 @@ async function loadIntegrations(){
       $(id).classList.toggle('connectedStatus',mlConnected);
     }
   });
+  state.mercadolivre={connected:mlConnected,ml_user_id:mlUserId};
   const dashMl=$('dashMlStatus');
   if(dashMl)dashMl.textContent=mlConnected?'Conectado':'Pendente';
+  document.querySelectorAll('.connectProvider[data-provider="mercadolivre"]').forEach(btn=>{
+    btn.textContent=mlConnected?'Desconectar':'Conectar';
+    btn.classList.toggle('dangerBtn',mlConnected);
+    btn.disabled=false;
+  });
 }
+async function callDisconnect(provider){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token)throw new Error('Sessão expirada. Faça login novamente.');
+  const endpoint=provider==='mercadolivre'?'mercadolivre-disconnect':provider==='instagram'?'instagram-disconnect':provider==='shopee'?'shopee-disconnect':null;
+  if(!endpoint)throw new Error('Desconexão não disponível.');
+  const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_ANON_KEY}});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||data.success===false)throw new Error(data.error||`Erro HTTP ${r.status}`);
+  return data;
+}
+
 document.querySelectorAll('.connectProvider').forEach(btn=>btn.onclick=async()=>{
   if(!requireAccess())return;
   const provider=btn.dataset.provider;
-
-  if(provider==='shopee'){
-    $('shopeeAppId').value='';
-    $('shopeeSecret').value='';
-    $('shopeeConnectMsg').textContent='';
-    modal('shopeeConnectModal');
-    return;
-  }
-
-  if(provider==='whatsapp'){
-    $('waWabaId').value='';
-    $('waPhoneNumberId').value='';
-    $('waAccessToken').value='';
-    $('waDefaultRecipient').value='';
-    $('waConnectMsg').textContent=state.whatsapp.connected
-      ? `Conectada${state.whatsapp.verified_name?' como '+state.whatsapp.verified_name:''}${state.whatsapp.phone_mask?' • '+state.whatsapp.phone_mask:''}. Para trocar as credenciais, preencha os campos novamente.`
-      : 'Informe os dados da Meta. O token será enviado somente ao backend e armazenado criptografado.';
-    $('waTestArea').classList.toggle('hidden',!state.whatsapp.connected);
-    modal('whatsappConnectModal');
-    return;
-  }
-
   try{
+    if(provider==='shopee'){
+      if(state.shopee?.connected){if(!confirm('Desconectar a Shopee desta conta? Seus produtos já salvos não serão apagados.'))return;await callDisconnect('shopee');await loadIntegrations();toast('Shopee desconectada.','ok');return;}
+      $('shopeeAppId').value='';$('shopeeSecret').value='';$('shopeeConnectMsg').textContent='';modal('shopeeConnectModal');return;
+    }
+    if(provider==='mercadolivre'&&state.mercadolivre?.connected){if(!confirm('Desconectar o Mercado Livre desta conta? Seus produtos já salvos não serão apagados.'))return;await callDisconnect('mercadolivre');await loadIntegrations();toast('Mercado Livre desconectado.','ok');return;}
+    if(provider==='instagram'&&state.instagram?.connected){if(!confirm('Desconectar o Instagram desta conta?'))return;await callDisconnect('instagram');await loadIntegrations();toast('Instagram desconectado.','ok');return;}
+    if(provider==='whatsapp'){$('waWabaId').value='';$('waPhoneNumberId').value='';$('waAccessToken').value='';$('waDefaultRecipient').value='';$('waConnectMsg').textContent='Informe os dados da Meta.';modal('whatsappConnectModal');return;}
     const{data:{session}}=await sb.auth.getSession();
     if(!session)throw new Error('Sessão expirada. Faça login novamente.');
     const endpoint=provider==='mercadolivre'?'mercadolivre-auth':provider==='instagram'?'instagram-auth':`auth-start?provider=${encodeURIComponent(provider)}`;
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{
-      method:'GET',
-      headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}
-    });
+    const r=await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`,{method:'GET',headers:{Authorization:`Bearer ${session.access_token}`,apikey:SUPABASE_ANON_KEY}});
     const data=await r.json().catch(()=>({}));
     const url=data.authorization_url||data.url;
     if(r.ok&&url){location.href=url;return;}
     toast(data.error||'Integração ainda não configurada no backend.','error');
-  }catch(e){
-    toast('Não foi possível iniciar a integração: '+e.message,'error');
-  }
+  }catch(e){toast('Não foi possível alterar a integração: '+(e?.message||String(e)),'error')}
 });
 
 
@@ -686,12 +828,16 @@ async function loadAdmin(){
     {data:users,error:ue},
     {data:errors},
     {count:postCount},
-    {count:activeSubs}
+    {count:activeSubs},
+    {count:successPosts},
+    {count:pendingQueue}
   ]=await Promise.all([
     sb.rpc('admin_list_users'),
     sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(50),
     sb.from('post_logs').select('*',{count:'exact',head:true}),
-    sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active')
+    sb.from('subscriptions').select('*',{count:'exact',head:true}).eq('status','active'),
+    sb.from('post_logs').select('*',{count:'exact',head:true}).eq('status','success'),
+    sb.from('post_queue').select('*',{count:'exact',head:true}).eq('status','pending')
   ]);
 
   if(ue)return toast('Admin SQL incompleto: '+ue.message,'error');
@@ -701,6 +847,9 @@ async function loadAdmin(){
   $('adminActiveSubs').textContent=activeSubs||0;
   $('adminPosts').textContent=postCount||0;
   $('adminErrors').textContent=(errors||[]).length;
+  if($('adminSuccessPosts'))$('adminSuccessPosts').textContent=successPosts||0;
+  if($('adminPendingQueue'))$('adminPendingQueue').textContent=pendingQueue||0;
+  if($('adminSystemHealth'))$('adminSystemHealth').innerHTML=`<div class="tableRow"><div><b>Instagram</b><small>Publicação automática</small></div><span class="tag">ATIVO</span><span>${successPosts||0} sucessos</span><span></span></div><div class="tableRow"><div><b>Fila</b><small>Itens aguardando processamento</small></div><span class="tag">${pendingQueue||0} pendentes</span><span></span><span></span></div><div class="tableRow"><div><b>WhatsApp / Facebook / Telegram</b><small>Recursos futuros</small></div><span class="tag">EM DESENVOLVIMENTO</span><span></span><span></span></div>`;
 
   $('adminUserList').innerHTML=arr.map(u=>`
     <div class="tableRow">
@@ -767,9 +916,10 @@ window.adminToggle=async(userId,blocked)=>{
 
 // V5.1 - painel do Bot Automático
 const BOT_CONFIG_KEY='botAfiliadosV51Config',BOT_ACTIVE_KEY='botAfiliadosV51Active';
-function getBotConfig(){try{return JSON.parse(localStorage.getItem(BOT_CONFIG_KEY))||{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}catch(e){return{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,useML:true,useShopee:false,useWhats:true,useInstagram:false}}}
-function botIsActive(){return localStorage.getItem(BOT_ACTIVE_KEY)==='1'}
-function renderBotActivity(){if(!$('botActivity'))return;const rows=(state.posts||[]).slice(0,5);$('botActivity').innerHTML=rows.map(p=>`<div class="activityItem"><b>${esc(p.status==='success'?'Publicado':'Registro')}: ${esc(p.provider||'canal')}</b><span>${p.created_at?new Date(p.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="empty">Nenhuma publicação registrada ainda.</div>'}
+const botStorageKey=key=>`${key}:${state.user?.id||'sem-usuario'}`;
+function getBotConfig(){try{return JSON.parse(localStorage.getItem(botStorageKey(BOT_CONFIG_KEY)))||{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,queueTarget:20,categories:['Geral'],useML:true,useShopee:false,useWhats:true,useInstagram:false}}catch(e){return{interval:15,minDiscount:20,minPrice:10,maxPrice:1000,dailyLimit:30,queueTarget:20,categories:['Geral'],useML:true,useShopee:false,useWhats:true,useInstagram:false}}}
+function botIsActive(){return localStorage.getItem(botStorageKey(BOT_ACTIVE_KEY))==='1'}
+function renderBotActivity(){if(!$('botActivity'))return;const rows=(state.posts||[]).slice(0,5);$('botActivity').innerHTML=rows.map(p=>`<div class="activityItem"><b>${esc(p.status==='success'?'Publicado':'Erro')}: ${esc(p.provider||'canal')}</b><span>${p.created_at?new Date(p.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="empty">Nenhuma publicação registrada ainda.</div>'}
 function renderBotV51(){
   if(!$('botAutoToggle'))return;
   const c=getBotConfig(),active=botIsActive();
@@ -780,12 +930,12 @@ function renderBotV51(){
   setText('sideBotBadge',active?'ATIVO':'PAUSADO');
   setText('sideBotToggle',active?'Ⅱ Pausar Bot':'▶ Ativar Bot');
   setText('botIntervalLabel',c.interval>=60?(c.interval/60)+' hora'+(c.interval>60?'s':''):c.interval+' minutos');
-  setText('botPostsToday',state.share?.used||0);
+  setText('botPostsToday',Number(state.todaySuccessfulPosts||0));
   setText('botOnlineStatus',active?'● Configurado':'● Aguardando');
   setText('botHeadline',active?'Automação configurada 🚀':'Pronto para configurar');
-  setText('botStatusHelp',active?'Preferências salvas. O worker 24h do backend ainda precisa ser ligado.':'Conecte WhatsApp/Instagram e escolha os filtros.');
+  setText('botStatusHelp',active?'Automação ativa no servidor. Publicações confirmadas aparecem no contador.':'Conecte o Instagram e escolha os filtros.');
   setText('nextSearch',active?c.interval+' min':'—');
-  setText('channelCount',(state.whatsapp?.connected?1:0)+(state.instagram?.connected?1:0));
+  setText('channelCount',(state.instagram?.connected?1:0));
   renderBotActivity();
 }
 
@@ -819,13 +969,13 @@ async function setBotActive(v){
     }
 
     const active=data.bot?.active===true;
-    localStorage.setItem(BOT_ACTIVE_KEY,active?'1':'0');
+    localStorage.setItem(botStorageKey(BOT_ACTIVE_KEY),active?'1':'0');
     renderBotV51();
     toast(active?'Bot Automático ativado no servidor.':'Bot Automático pausado.','ok');
+    if(active)playUiSound('activate');
   }catch(e){
     console.error('Erro ao alterar Bot Automático:',e);
-    localStorage.setItem(BOT_ACTIVE_KEY,'0');
-    if(toggle)toggle.checked=false;
+    if(toggle)toggle.checked=botIsActive();
     renderBotV51();
     toast('Não foi possível alterar o Bot: '+(e?.message||String(e)),'error');
   }finally{
@@ -835,8 +985,29 @@ async function setBotActive(v){
 }
 if($('botAutoToggle'))$('botAutoToggle').onchange=e=>setBotActive(e.target.checked);
 if($('sideBotToggle'))$('sideBotToggle').onclick=()=>setBotActive(!botIsActive());
-if($('openBotConfig'))$('openBotConfig').onclick=()=>{const c=getBotConfig();$('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=!!c.useWhats;$('botUseInstagram').checked=!!c.useInstagram;modal('botConfigModal')};
-if($('saveBotConfig'))$('saveBotConfig').onclick=()=>{const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:$('botUseWhats').checked,useInstagram:$('botUseInstagram').checked};localStorage.setItem(BOT_CONFIG_KEY,JSON.stringify(c));closeModal('botConfigModal');renderBotV51();toast('Configurações do Bot salvas.','ok')};
+if($('openBotConfig'))$('openBotConfig').onclick=async()=>{
+  let c=getBotConfig();
+  try{
+    const {data,error}=await sb.from('bot_automation_settings').select('interval_minutes,min_discount,min_price,max_price,daily_limit,queue_target,selected_categories,use_mercadolivre,use_shopee,use_instagram,mercadolivre_active,shopee_active,mercadolivre_interval_minutes,shopee_interval_minutes').eq('user_id',state.user.id).maybeSingle();
+    if(error)throw error;
+    if(data){
+      c={interval:Number(data.interval_minutes??15),minDiscount:Number(data.min_discount??20),minPrice:Number(data.min_price??0),maxPrice:Number(data.max_price??10000),dailyLimit:Number(data.daily_limit??30),queueTarget:Number(data.queue_target??20),categories:Array.isArray(data.selected_categories)?data.selected_categories:['Geral'],useML:data.use_mercadolivre===true,useShopee:data.use_shopee===true,useWhats:false,useInstagram:data.use_instagram===true,mlActive:data.mercadolivre_active!==false,shopeeActive:data.shopee_active!==false,mlInterval:Number(data.mercadolivre_interval_minutes??data.interval_minutes??15),shopeeInterval:Number(data.shopee_interval_minutes??data.interval_minutes??15)};
+      localStorage.setItem(botStorageKey(BOT_CONFIG_KEY),JSON.stringify(c));
+    }
+  }catch(e){console.warn('Configuração backend indisponível; usando cache local.',e);}
+  $('botInterval').value=String(c.interval);$('botMinDiscount').value=c.minDiscount;$('botMinPrice').value=c.minPrice;$('botMaxPrice').value=c.maxPrice;$('botDailyLimit').value=c.dailyLimit;$('botQueueTarget').value=c.queueTarget||20;$('botUseML').checked=!!c.useML;$('botUseShopee').checked=!!c.useShopee;$('botUseWhats').checked=false;$('botUseInstagram').checked=!!c.useInstagram;if($('botMLActive'))$('botMLActive').checked=c.mlActive!==false;if($('botShopeeActive'))$('botShopeeActive').checked=c.shopeeActive!==false;if($('botMLInterval'))$('botMLInterval').value=String(c.mlInterval||c.interval);if($('botShopeeInterval'))$('botShopeeInterval').value=String(c.shopeeInterval||c.interval);const selected=new Set(c.categories||['Geral']);document.querySelectorAll('[data-bot-category]').forEach(x=>x.checked=selected.has(x.value));modal('botConfigModal');
+};
+if($('saveBotConfig'))$('saveBotConfig').onclick=async()=>{
+  const categories=[...document.querySelectorAll('[data-bot-category]:checked')].map(x=>x.value);if(categories.includes('geral')&&categories.length>1)return toast('Escolha Geral OU as categorias específicas.','error');if(!categories.length)return toast('Escolha pelo menos uma categoria.','error');const c={interval:Number($('botInterval').value),minDiscount:Number($('botMinDiscount').value||0),minPrice:Number($('botMinPrice').value||0),maxPrice:Number($('botMaxPrice').value||0),dailyLimit:Number($('botDailyLimit').value||30),queueTarget:Math.max(1,Math.min(30,Number($('botQueueTarget').value||20))),categories,useML:$('botUseML').checked,useShopee:$('botUseShopee').checked,useWhats:false,useInstagram:$('botUseInstagram').checked,mlActive:$('botMLActive')?.checked!==false,shopeeActive:$('botShopeeActive')?.checked!==false,mlInterval:Number($('botMLInterval')?.value||$('botInterval').value),shopeeInterval:Number($('botShopeeInterval')?.value||$('botInterval').value)};
+  const btn=$('saveBotConfig');btn.disabled=true;
+  try{
+    const payload={user_id:state.user.id,interval_minutes:c.interval,daily_limit:c.dailyLimit,min_discount:c.minDiscount,min_price:c.minPrice,max_price:c.maxPrice,queue_target:c.queueTarget,selected_categories:c.categories,use_mercadolivre:c.useML,use_shopee:c.useShopee,use_whatsapp:false,use_instagram:c.useInstagram,mercadolivre_active:c.mlActive,shopee_active:c.shopeeActive,mercadolivre_interval_minutes:c.mlInterval,shopee_interval_minutes:c.shopeeInterval,updated_at:new Date().toISOString()};
+    const {data:saved,error}=await sb.from('bot_automation_settings').upsert(payload,{onConflict:'user_id'}).select('queue_target,selected_categories').single();if(error)throw error;
+    c.queueTarget=Number(saved?.queue_target??c.queueTarget);c.categories=Array.isArray(saved?.selected_categories)?saved.selected_categories:c.categories;
+    localStorage.setItem(botStorageKey(BOT_CONFIG_KEY),JSON.stringify(c));closeModal('botConfigModal');renderBotV51();toast('Configurações salvas na sua conta.','ok');
+  }catch(e){toast('Não foi possível salvar no backend: '+(e?.message||String(e)),'error');}
+  finally{btn.disabled=false;}
+};
 if($('quickCampaign'))$('quickCampaign').onclick=()=>{if(!requireAccess())return;fillCampaignProducts();modal('campaignModal')};
 document.querySelectorAll('.channelSoon').forEach(btn=>btn.onclick=()=>toast('Canal preparado no painel. A integração oficial será ligada no backend.','ok'));
 
@@ -846,3 +1017,5 @@ sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){state.user=
 // Premium Dashboard bridge: visual shortcuts reuse existing bot controls.
 document.getElementById('setupOpenConfig')?.addEventListener('click',()=>document.getElementById('openBotConfig')?.click());
 document.getElementById('setupActivateBot')?.addEventListener('click',()=>document.getElementById('sideBotToggle')?.click());
+
+updateSoundButton();

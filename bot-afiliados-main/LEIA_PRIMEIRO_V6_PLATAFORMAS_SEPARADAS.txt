@@ -1,0 +1,34 @@
+BOT AFILIADOS PREMIUM - V6.0 PLATAFORMAS SEPARADAS
+
+O QUE FOI ATUALIZADO
+- Mercado Livre agora tem fluxo OAuth proprio: mercadolivre-auth -> Mercado Livre -> mercadolivre-callback.
+- A conexao do Mercado Livre passa a ser vinculada ao user_id do Supabase. Nao usa mais um token global id=1 para todos.
+- Shopee, Mercado Livre e Instagram mostram Conectar / Desconectar separadamente.
+- Desconectar uma integracao NAO apaga os produtos ja salvos.
+- Tela Ofertas permite buscar somente a plataforma selecionada.
+- Fila ganhou filtro Todas / Shopee / Mercado Livre.
+- Configuracao do Bot ganhou ativo/pausado e intervalo separados para Shopee e Mercado Livre.
+- Worker process-post-queue respeita a plataforma de origem do produto.
+
+ORDEM PARA ATUALIZAR NO SUPABASE
+1. Execute ATUALIZACAO_V6_PLATAFORMAS_SEPARADAS.sql no SQL Editor.
+2. Confirme estes Secrets:
+   MERCADOLIVRE_CLIENT_ID
+   MERCADOLIVRE_CLIENT_SECRET
+   MERCADOLIVRE_REDIRECT_URI
+   APP_PUBLIC_URL = https://gustavo2025001.github.io/bot-afiliados/
+3. No aplicativo do Mercado Livre, MERCADOLIVRE_REDIRECT_URI deve ser EXATAMENTE a URL da Edge Function mercadolivre-callback.
+4. Publique/republique as Edge Functions:
+   mercadolivre-auth
+   mercadolivre-callback
+   mercadolivre-status
+   mercadolivre-disconnect
+   shopee-disconnect
+   instagram-disconnect
+   process-post-queue
+5. Publique index.html, app.js e style.css atualizados no GitHub Pages.
+
+IMPORTANTE
+- A busca automatica continua usando a Edge Function fetch-offers existente no seu Supabase. O frontend agora envia somente os providers conectados/selecionados.
+- Se fetch-offers nao estiver implantada no projeto, o painel exibira uma mensagem em vez de misturar plataformas.
+- Nao coloque CLIENT_SECRET, service_role ou tokens no GitHub.

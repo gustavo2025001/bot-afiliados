@@ -1,0 +1,7 @@
+V5.3.3 - AUTOMATICO INSTAGRAM CORRIGIDO
+
+- process-post-queue usa access_token atual do proprio cliente.
+- Aguarda status FINISHED antes de media_publish.
+- So grava success e incrementa uso apos ID real do Instagram.
+- WhatsApp automatico permanece desativado (Em breve).
+- Mantida separacao por user_id.

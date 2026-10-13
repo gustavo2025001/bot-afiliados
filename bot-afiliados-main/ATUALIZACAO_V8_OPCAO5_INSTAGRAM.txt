@@ -1,0 +1,16 @@
+BOT AFILIADOS PREMIUM — ATUALIZAÇÃO V8
+
+Incluído nesta versão:
+- Visual “Opção 5” aplicado ao painel sem inventar dados: os números/status continuam sendo os dados reais do sistema.
+- Vitrine preservada em /ofertas/ e atalho “Vitrine de Ofertas” no painel.
+- Assinatura GUSTAVOBARBOSA preservada no painel e adicionada à página de sucesso do Instagram.
+- Nova página instagram-conectado.html.
+- instagram-callback atualizado para salvar a conexão e redirecionar para a página do site, evitando o HTML cru exibido pelo gateway da Edge Function.
+- Nenhum token, code ou state é colocado na URL da página pública de sucesso.
+
+IMPORTANTE PARA O SUPABASE:
+1. Publique os arquivos do site no GitHub Pages.
+2. Faça deploy da Edge Function supabase/functions/instagram-callback/index.ts.
+3. Mantenha INSTAGRAM_REDIRECT_URI apontando para a Edge Function instagram-callback.
+4. APP_PUBLIC_URL pode apontar para https://gustavo2025001.github.io/bot-afiliados/
+5. Faça uma NOVA autorização do Instagram para testar; não reutilize uma URL antiga de callback.
