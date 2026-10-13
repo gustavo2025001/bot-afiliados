@@ -187,5 +187,29 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js?v=5.3.2"></script>
+
+<!-- AVISO PRE-LANCAMENTO - sem alteracoes na autenticacao ou automacoes -->
+<style>
+#bs-prelaunch-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(5,5,17,.91);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:Arial,sans-serif}
+#bs-prelaunch-box{width:min(100%,510px);box-sizing:border-box;text-align:center;background:linear-gradient(145deg,#21133b,#10101f);color:#fff;border:1px solid #8b4dff;border-radius:22px;padding:34px 25px;box-shadow:0 20px 75px rgba(95,39,196,.35)}
+#bs-prelaunch-box h2{color:#d5b5ff;font-size:19px;margin:12px 0}#bs-prelaunch-box h3{font-size:23px;margin:14px 0}#bs-prelaunch-box p{line-height:1.6;color:#e0d8ed;font-size:15px}#bs-prelaunch-box .bs-status{background:#382353;color:#e6cfff;border-radius:12px;padding:12px;margin:18px 0}#bs-prelaunch-box small{display:block;color:#b8a6ce;margin-top:12px}#bs-prelaunch-close{border:0;background:linear-gradient(90deg,#a03afa,#5b51ff);color:#fff;padding:13px 36px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:22px}#bs-prelaunch-close:focus-visible{outline:3px solid #fff;outline-offset:3px}
+</style>
+<div id="bs-prelaunch-overlay" role="dialog" aria-modal="true" aria-labelledby="bs-prelaunch-title">
+  <div id="bs-prelaunch-box">
+    <div style="font-size:46px" aria-hidden="true">🤖</div>
+    <h2>BOT AFILIADOS PREMIUM</h2>
+    <h3 id="bs-prelaunch-title">🚀 Estamos preparando nosso lançamento!</h3>
+    <p>Nossa plataforma está passando pelos últimos ajustes, melhorias e testes para oferecer uma experiência moderna, segura e eficiente.</p>
+    <p>Algumas funcionalidades poderão permanecer temporariamente indisponíveis durante essa preparação.</p>
+    <div class="bs-status">🛠️ Preparação para o lançamento</div>
+    <p><strong>Em breve estaremos no ar!</strong></p>
+    <small>Desenvolvido por GUSTAVOBARBOSA</small>
+    <button id="bs-prelaunch-close" type="button">Entendi</button>
+  </div>
+</div>
+<script>
+(function(){var close=document.getElementById('bs-prelaunch-close');if(close){close.addEventListener('click',function(){document.getElementById('bs-prelaunch-overlay').remove()});}})();
+</script>
+
 </body>
 </html>
